@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "opencode-agents-sidebar",
+  "version": "0.1.0",
+  "description": "OpenCode TUI sidebar plugin for OhMyOpenAgent agents -- lifecycle categories, collapsible sections, model display",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oh-my-openagent/agents-sidebar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/oh-my-openagent/agents-sidebar/issues"
+  },
+  "homepage": "https://github.com/oh-my-openagent/agents-sidebar#readme",
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "agents",
+    "sidebar",
+    "tui",
+    "oh-my-openagent",
+    "omO"
+  ],
+  "oc-plugin": ["tui"],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./tui": {
+      "import": "./tui.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "bun build src/render.ts --outfile dist/tui.js --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/sdk --external @opentui/core --external @opentui/solid --external solid-js",
+    "build:index": "bun build index.ts --outfile dist/index.js --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/sdk",
+    "build:types": "bun x tsc --emitDeclarationOnly",
+    "build:all": "bun run clean && bun run build:types && bun run build:index && bun run build",
+    "test": "bun test",
+    "typecheck": "bun x tsc --noEmit",
+    "dev:install": "cp dist/tui.js tui.js",
+    "prepublishOnly": "bun run build:all"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.4.0",
+    "@opentui/solid": ">=0.1.0",
+    "solid-js": ">=1.8.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}

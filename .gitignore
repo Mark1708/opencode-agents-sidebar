@@ -1,0 +1,10 @@
+node_modules/
+tui.js
+index.js
+*.d.ts
+*.d.ts.map
+*.js.map
+dist/
+.DS_Store
+*.log
+bun.lockb
