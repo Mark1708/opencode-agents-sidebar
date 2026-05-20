@@ -6,16 +6,16 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "author": "",
+  "author": "mark <i@mark1708.ru>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/oh-my-openagent/agents-sidebar.git"
+    "url": "https://git.mark1708.ru/me/opencode/agents-sidebar.git"
   },
   "bugs": {
-    "url": "https://github.com/oh-my-openagent/agents-sidebar/issues"
+    "url": "https://git.mark1708.ru/me/opencode/agents-sidebar/issues"
   },
-  "homepage": "https://github.com/oh-my-openagent/agents-sidebar#readme",
+  "homepage": "https://git.mark1708.ru/me/opencode/agents-sidebar",
   "keywords": [
     "opencode",
     "opencode-plugin",
