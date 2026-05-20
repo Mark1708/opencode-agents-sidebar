@@ -277,7 +277,11 @@ Agents are automatically grouped by lifecycle:
 
 ## Screenshots
 
-<!-- TODO: add screenshot -->
+![All categories collapsed](assets/categories-collapsed.png)
+
+![Categories expanded](assets/categories-expanded.png)
+
+![Agent details](assets/agent-details.png)
 
 ## Troubleshooting
 
