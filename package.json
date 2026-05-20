@@ -10,7 +10,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Mark1708/opencode-agents-sidebar.git"
+    "url": "git+https://github.com/Mark1708/opencode-agents-sidebar.git"
   },
   "bugs": {
     "url": "https://github.com/Mark1708/opencode-agents-sidebar/issues"
@@ -25,7 +25,9 @@
     "oh-my-openagent",
     "omO"
   ],
-  "oc-plugin": ["tui"],
+  "oc-plugin": [
+    "tui"
+  ],
   "exports": {
     ".": {
       "import": "./dist/index.js",
