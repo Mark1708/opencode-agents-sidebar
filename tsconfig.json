@@ -13,7 +13,7 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "types": ["@types/bun"]
+    "types": ["bun"]
   },
   "include": ["src/**/*.ts", "*.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]

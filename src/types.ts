@@ -1,6 +1,4 @@
-import type { JSX } from "@opentui/solid";
-
-export type Child = JSX.Element | string | number | null | undefined | false;
+export type Child = unknown | string | number | null | undefined | false;
 export type ModelSource = "primary" | "fallback" | "none";
 export type ShowDisabledMode = "hidden" | "dimmed" | "grouped";
 export type AgentRowMode = "compact" | "split";

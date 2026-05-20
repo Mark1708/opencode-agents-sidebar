@@ -7,4 +7,10 @@ index.js
 dist/
 .DS_Store
 *.log
-bun.lockbsrc/tui.ts
+bun.lockb
+src/tui.ts
+.env
+.env.*
+*.pem
+*.key
+coverage/

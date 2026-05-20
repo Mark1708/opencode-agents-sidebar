@@ -170,8 +170,6 @@ interface RenderSidebarProps {
   collapsedState: Record<string, boolean>;
   selectedAgent: string | null;
   isSectionCollapsed: boolean;
-  searchMode: boolean;
-  searchQuery: string;
   toggleCategory: (category: string) => void;
   toggleAgent: (name: string) => void;
   toggleSection: () => void;
@@ -182,13 +180,12 @@ function renderLoadedSidebar(props: RenderSidebarProps, agents: AgentEntry[]): J
   if (props.state.kind !== "loaded") return renderErrorState(props.state, props.theme);
   const loadedConfig = props.state.config;
   const mergedConfig = mergeConfig(loadedConfig.tui);
-  const visibleAgents = filterAgents(agents, props.searchQuery);
+  const visibleAgents = filterAgents(agents, "");
   const stats = buildHeaderStats(visibleAgents);
   const groups = groupByCategory(visibleAgents, loadedConfig);
   const body = groups.map((group) => renderCategoryGroup(group, groupOptions(group, props, mergedConfig)));
   const header = renderHeader(loadedConfig, mergedConfig, stats, props.theme, props.isSectionCollapsed, props.toggleSection);
-  const search = props.searchMode ? [renderSearchBar(props.searchQuery, mergedConfig, props.theme)] : [];
-  return renderPanel(props.isSectionCollapsed ? [...header, ...search] : [...header, ...search, null, ...body], props.theme);
+  return renderPanel(props.isSectionCollapsed ? [...header] : [...header, null, ...body], props.theme);
 }
 
 function groupOptions(group: CategoryGroup, props: RenderSidebarProps, config: SidebarConfig): RenderGroupOptions {
@@ -205,11 +202,6 @@ function groupOptions(group: CategoryGroup, props: RenderSidebarProps, config: S
     onToggleAgent: props.toggleAgent,
     theme: props.theme,
   };
-}
-
-function renderSearchBar(query: string, config: SidebarConfig, theme: TextTheme): JSX.Element {
-  const label = truncateTo(`> ${query}_`, config.sidebar_width);
-  return box({ width: "100%" }, [renderText(label.slice(0, 1), theme.accent), renderText(label.slice(1), theme.text)]);
 }
 
 export function buildHeaderStats(agents: AgentEntry[]): HeaderStats {
@@ -270,8 +262,7 @@ const plugin: TuiPluginModule & { id: string } = {
     const [getCollapsedMap, setCollapsedMap] = createSignal<Record<string, boolean>>({});
     const [getSelectedAgent, setSelectedAgent] = createSignal<string | null>(null);
     const [isSectionCollapsed, setSectionCollapsed] = createSignal(false);
-    const [searchMode, _setSearchMode] = createSignal(false);
-    const [searchQuery, _setSearchQuery] = createSignal("");
+
     const initializeCollapsed = (state: ConfigState): void => {
       if (collapsedInitialized || state.kind !== "loaded") return;
       collapsedInitialized = true;
@@ -310,8 +301,6 @@ const plugin: TuiPluginModule & { id: string } = {
               collapsedState: getCollapsedMap(),
               selectedAgent: getSelectedAgent(),
               isSectionCollapsed: isSectionCollapsed(),
-              searchMode: searchMode(),
-              searchQuery: searchQuery(),
               toggleCategory,
               toggleAgent,
               toggleSection: toggleSectionCollapsed,

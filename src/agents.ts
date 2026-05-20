@@ -1,7 +1,7 @@
-import type { JSX } from "@opentui/solid";
 import { CATEGORY_MAP, DEFAULT_CATEGORY, DEFAULTS, DISABLED_CATEGORY } from "./defaults.js";
 import { mergeConfig } from "./config.js";
-import type { AgentConfig, AgentEntry, CategoryGroup, Child, ModelSource, OmoConfig, SidebarConfig, ShowDisabledMode } from "./types.js";
+import type { AgentConfig, AgentEntry, CategoryGroup, ModelSource, OmoConfig, SidebarConfig, ShowDisabledMode } from "./types.js";
+import { searchableAgentText } from "./format.js";
 
 export function normalizeAgentName(name: string): string {
   return name.replaceAll("_", "-");
@@ -100,17 +100,6 @@ export function filterAgents(agents: AgentEntry[], query: string): AgentEntry[] 
   const normalizedQuery = query.trim().toLowerCase();
   if (!normalizedQuery) return agents;
   return agents.filter((agent) => searchableAgentText(agent).includes(normalizedQuery));
-}
-
-function searchableAgentText(agent: AgentEntry): string {
-  return [
-    agent.name,
-    agent.category,
-    agent.model,
-    agent.variant ?? "",
-    agent.mode ?? "",
-    ...agent.fallbacks.flatMap((fallback) => [fallback.model, fallback.variant ?? ""]),
-  ].join(" ").toLowerCase();
 }
 
 function splitModelRefLocal(model: string): { provider: string; model: string } {
