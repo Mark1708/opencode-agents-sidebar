@@ -41,7 +41,7 @@
   "scripts": {
     "clean": "rm -rf dist",
     "build": "bun build src/render.ts --outfile dist/tui.js --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/sdk --external @opentui/core --external @opentui/solid --external solid-js",
-    "build:index": "bun build index.ts --outfile dist/index.js --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/sdk",
+    "build:index": "bun build src/index.ts --outfile dist/index.js --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/sdk",
     "build:types": "bun x tsc --emitDeclarationOnly",
     "build:all": "bun run clean && bun run build:types && bun run build:index && bun run build",
     "test": "bun test",
