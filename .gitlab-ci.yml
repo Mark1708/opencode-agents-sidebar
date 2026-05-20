@@ -1,0 +1,49 @@
+stages:
+  - validate
+  - build
+  - publish
+
+variables:
+  BUN_VERSION: "1.2"
+
+.default:
+  tags: [k8s]
+  image: oven/bun:${BUN_VERSION}
+  before_script:
+    - bun install --frozen-lockfile
+
+typecheck:
+  extends: .default
+  stage: validate
+  script:
+    - bun run typecheck
+
+test:
+  extends: .default
+  stage: validate
+  script:
+    - bun test
+
+build:
+  extends: .default
+  stage: build
+  script:
+    - bun run build
+    - bun run build:index
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 day
+
+publish-npm:
+  stage: publish
+  tags: [k8s]
+  image: node:22-alpine
+  needs: [typecheck, test, build]
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  script:
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+    - npm publish --access public
+  after_script:
+    - rm -f .npmrc
