@@ -275,7 +275,7 @@ const plugin: TuiPluginModule & { id: string } = {
     const initializeCollapsed = (state: ConfigState): void => {
       if (collapsedInitialized || state.kind !== "loaded") return;
       collapsedInitialized = true;
-      setCollapsedMap(Object.fromEntries((state.config.tui?.default_collapsed ?? []).map((name) => [name, true])));
+      setCollapsedMap(Object.fromEntries((state.config.tui?.default_collapsed ?? DEFAULTS.default_collapsed).map((name) => [name, true])));
       setSectionCollapsed(initialSectionCollapsed(state.config));
     };
     initializeCollapsed(currentState);

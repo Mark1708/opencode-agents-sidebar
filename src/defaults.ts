@@ -2,14 +2,16 @@ import type { SidebarConfig } from "./types.js";
 
 export const DEFAULT_CATEGORY = "Other";
 export const DISABLED_CATEGORY = "Disabled";
+export const DEFAULT_COLLAPSED_CATEGORIES = ["Orchestration", "Research", "Architecture", "Review", "Engineering", "Operations", "Analytics", "Consulting"];
 
-export const DEFAULTS: SidebarConfig = {
+export const DEFAULTS: SidebarConfig & { default_collapsed: string[] } = {
   sidebar_width: 34,
   name_width: 18,
   poll_interval_ms: 2000,
   slot_order: 850,
   title: "OmO Agents",
   category_order: ["Orchestration", "Research", "Architecture", "Review", "Engineering", "Operations", "Analytics", "Consulting", "Other"],
+  default_collapsed: DEFAULT_COLLAPSED_CATEGORIES,
   model_display: "details-only",
   show_provider: true,
   show_variant_in_details: false,

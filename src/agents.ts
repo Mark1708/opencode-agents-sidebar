@@ -45,8 +45,8 @@ export function formatModelName(
   const showProvider = options.showProvider ?? true;
   const modelRef = splitModelRefLocal(model);
   const formattedModel = showProvider && modelRef.provider
-    ? `${shortAlias(modelRef.provider, config.provider_aliases)}/${shortAlias(modelRef.model, config.model_aliases)}`
-    : shortAlias(modelRef.model, config.model_aliases);
+    ? `${shortAlias(modelRef.provider, config.provider_aliases)}/${modelRef.model}`
+    : modelRef.model;
   const variantLabel = variant ? config.variant_aliases[variant] ?? "" : "";
   const sourcePrefix = options.modelSource === "fallback" ? "fb:" : "";
   return [`${sourcePrefix}${formattedModel}`, variantLabel].filter((part) => part.length > 0).join(" · ");

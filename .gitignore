@@ -7,4 +7,4 @@ index.js
 dist/
 .DS_Store
 *.log
-bun.lockb
+bun.lockbsrc/tui.ts
