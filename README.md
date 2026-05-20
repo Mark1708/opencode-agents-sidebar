@@ -58,7 +58,7 @@ Install the plugin from source:
 ```bash
 cd ~/.config/opencode
 mkdir -p plugins
-git clone https://git.mark1708.ru/me/opencode/agents-sidebar.git plugins/agents-sidebar
+git clone https://github.com/Mark1708/opencode-agents-sidebar.git plugins/agents-sidebar
 cd plugins/agents-sidebar
 bun install
 bun run build:all
@@ -183,7 +183,7 @@ Supported values:
 ### Setup Development Environment
 
 ```bash
-git clone https://git.mark1708.ru/me/opencode/agents-sidebar.git
+git clone https://github.com/Mark1708/opencode-agents-sidebar.git
 cd agents-sidebar
 bun install
 bun run build:all
@@ -315,8 +315,8 @@ MIT License - see [LICENSE](./LICENSE) file for details.
 
 ## Support
 
-- [Documentation](https://git.mark1708.ru/me/opencode/agents-sidebar#readme)
-- [Issue Tracker](https://git.mark1708.ru/me/opencode/agents-sidebar/issues)
+- [Documentation](https://github.com/Mark1708/opencode-agents-sidebar#readme)
+- [Issue Tracker](https://github.com/Mark1708/opencode-agents-sidebar/issues)
 
 ## Acknowledgments
 
