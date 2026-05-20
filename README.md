@@ -58,7 +58,7 @@ Install the plugin from source:
 ```bash
 cd ~/.config/opencode
 mkdir -p plugins
-git clone https://github.com/oh-my-openagent/agents-sidebar.git plugins/agents-sidebar
+git clone https://git.mark1708.ru/me/opencode/agents-sidebar.git plugins/agents-sidebar
 cd plugins/agents-sidebar
 bun install
 bun run build:all
@@ -84,7 +84,8 @@ All configuration options are set in the `tui` section of your `oh-my-openagent.
     "sidebar_width": 34,
     "name_width": 18,
     "title": "OmO Agents",
-    "poll_interval_ms": 2000
+    "poll_interval_ms": 2000,
+    "slot_order": 850
   }
 }
 ```
@@ -126,11 +127,7 @@ Supported values:
       "Analytics",
       "Consulting",
       "Other"
-    ],
-    "default_collapsed": ["Other", "Disabled"],
-    "agent_categories": {
-      "custom-agent": "Custom Category"
-    }
+    ]
   }
 }
 ```
@@ -141,18 +138,20 @@ Supported values:
 {
   "tui": {
     "provider_aliases": {
-      "openai": "OA",
-      "anthropic": "ANT"
+      "openai": "oa",
+      "opencode": "oc",
+      "zai-coding-plan": "zai"
     },
     "model_aliases": {
-      "gpt-4": "G4",
-      "claude-3": "C3",
-      "glm-4.5": "G45"
+      "gpt-5.4-mini-fast": "gpt-5.4mf",
+      "gpt-5.4-mini": "gpt-5.4m",
+      "gpt-5.5": "5.5",
+      "glm-4.5-air": "glm-4.5a"
     },
     "variant_aliases": {
-      "fast": "f",
-      "turbo": "t",
-      "standard": "s"
+      "medium": "M",
+      "high": "H",
+      "xhigh": "XH"
     }
   }
 }
@@ -167,25 +166,14 @@ Supported values:
     "name_width": 18,
     "title": "OmO Agents",
     "poll_interval_ms": 2000,
+    "slot_order": 850,
     "model_display": "details-only",
     "show_provider": true,
     "show_variant_in_details": false,
     "show_disabled": "dimmed",
     "agent_row_mode": "compact",
     "symbols": "unicode",
-    "category_order": ["Orchestration", "Research", "Architecture", "Review", "Engineering", "Operations", "Analytics", "Consulting", "Other"],
-    "default_collapsed": ["Other"],
-    "provider_aliases": {
-      "openai": "OA",
-      "anthropic": "ANT"
-    },
-    "model_aliases": {
-      "gpt-4": "G4",
-      "claude-3": "C3"
-    },
-    "variant_aliases": {
-      "fast": "f"
-    }
+    "category_order": ["Orchestration", "Research", "Architecture", "Review", "Engineering", "Operations", "Analytics", "Consulting", "Other"]
   }
 }
 ```
@@ -195,7 +183,7 @@ Supported values:
 ### Setup Development Environment
 
 ```bash
-git clone https://github.com/oh-my-openagent/agents-sidebar.git
+git clone https://git.mark1708.ru/me/opencode/agents-sidebar.git
 cd agents-sidebar
 bun install
 bun run build:all
@@ -209,13 +197,7 @@ bun run typecheck
 # Build TUI component
 bun run build
 
-# Build index module
-bun run build:index
-
-# Emit TypeScript declarations
-bun run build:types
-
-# Build declarations, index module, and TUI component
+# Build declarations, types, and TUI component
 bun run build:all
 
 # Type check without emitting
@@ -227,8 +209,14 @@ bun run typecheck
 ```text
 agents-sidebar/
 ├── src/              # TUI rendering, config, formatting, and agent helpers
-├── index.ts          # Main plugin entry point
-├── tui.ts            # Source barrel for tests and local development
+│   ├── agents.ts     # Agent categorization and filtering logic
+│   ├── config.ts     # Configuration reading and merge logic
+│   ├── defaults.ts   # Default values and category mappings
+│   ├── format.ts     # Text formatting and display utilities
+│   ├── render.ts     # TUI rendering components and plugin entry
+│   ├── tui.test.ts   # Component tests
+│   ├── tui.ts        # TUI component implementation
+│   └── types.ts      # TypeScript type definitions
 ├── dist/             # Built package output
 ├── package.json      # Package metadata and scripts
 ├── tsconfig.json     # TypeScript configuration
@@ -250,14 +238,14 @@ agents-sidebar/
 
 Agents are automatically grouped by lifecycle:
 
-- **Orchestration**: Sisyphus, Hephaestus, Prometheus, Atlas, etc.
-- **Research**: Oracle, Librarian, Explore, Metis, etc.
-- **Architecture**: Planner, Architect, Code Architect, etc.
-- **Review**: Code Reviewers, Security Auditors, etc.
-- **Engineering**: Backend Dev, Test Writer, Docs Writer, etc.
-- **Operations**: Build Error Resolver, E2E Runner, etc.
-- **Analytics**: Data Analyst, Vision Processor, etc.
-- **Consulting**: Health Consultant, etc.
+- **Orchestration**: sisyphus, hephaestus, prometheus, atlas, sisyphus-junior
+- **Research**: oracle, librarian, explore, metis, momus, multimodal-looker
+- **Architecture**: planner, architect, code-architect
+- **Review**: code-reviewer, typescript-reviewer, python-reviewer, go-reviewer, rust-reviewer, java-reviewer, kotlin-reviewer, security-auditor, devops-reviewer
+- **Engineering**: backend-dev, test-writer, docs-writer
+- **Operations**: build-error-resolver, e2e-runner, release-manager, database-specialist
+- **Analytics**: data-analyst, vision-processor
+- **Consulting**: health-consultant
 - **Other**: Unmapped agents
 
 ### Display Modes
@@ -265,18 +253,18 @@ Agents are automatically grouped by lifecycle:
 #### Compact Mode
 
 ```text
-> sisyphus     OA G4 +2
-> oracle       ANT C3
-> planner      OA G45
+> sisyphus     oa g5.5mf +2
+> oracle       ant c3
+> planner      oc 5.5
 ```
 
 #### Split Mode
 
 ```text
-> sisyphus     OA
-               G4 · fast +2
-> oracle       ANT
-               C3 · standard
+> sisyphus     oa
+               g5.5mf · fast +2
+> oracle       ant
+               c3 · standard
 ```
 
 #### Details-Only Mode
@@ -286,6 +274,10 @@ Agents are automatically grouped by lifecycle:
 > oracle
 > planner
 ```
+
+## Screenshots
+
+<!-- TODO: add screenshot -->
 
 ## Troubleshooting
 
@@ -323,9 +315,8 @@ MIT License - see [LICENSE](./LICENSE) file for details.
 
 ## Support
 
-- [Documentation](https://github.com/oh-my-openagent/agents-sidebar#readme)
-- [Issue Tracker](https://github.com/oh-my-openagent/agents-sidebar/issues)
-- [Discussions](https://github.com/oh-my-openagent/agents-sidebar/discussions)
+- [Documentation](https://git.mark1708.ru/me/opencode/agents-sidebar#readme)
+- [Issue Tracker](https://git.mark1708.ru/me/opencode/agents-sidebar/issues)
 
 ## Acknowledgments
 
