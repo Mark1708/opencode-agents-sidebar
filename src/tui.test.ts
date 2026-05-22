@@ -24,7 +24,7 @@ import {
   truncateTo,
   type AgentEntry,
   type OmoConfig,
-} from "./tui";
+} from "./tui.js";
 
 const SAMPLE_OMO_CONFIG: OmoConfig = {
   agents: {
