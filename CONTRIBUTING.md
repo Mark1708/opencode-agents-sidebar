@@ -1,184 +1,57 @@
-# Contributing
+# Contributing to opencode-agents-sidebar
 
-Thank you for your interest in contributing to the agents-sidebar plugin! This document provides guidelines for development contributions.
+Thank you for your interest in contributing. This document covers the development setup, code style, and pull request process.
+
+## Prerequisites
+
+- **Bun** (latest stable) -- <https://bun.sh>
+- **TypeScript** >= 5.5 (installed via `bun install`)
 
 ## Development Setup
 
-### Prerequisites
-
-- [Bun](https://bun.sh/) >= 1.1.0
-- [Node.js](https://nodejs.org/) >= 18.0.0 (for compatibility)
-
-### Environment Setup
-
 ```bash
-# Clone the repository
-git clone https://github.com/oh-my-openagent/agents-sidebar.git
+git clone https://github.com/Mark1708/opencode-agents-sidebar.git
 cd agents-sidebar
-
-# Install dependencies
 bun install
-
-# Build the plugin
-bun run build
-
-# Run tests
+bun run build:all
 bun test
-
-# Type check
 bun run typecheck
 ```
 
-## Development Workflow
+## Build Commands
 
-### 1. Code Style
+| Command | Description |
+|---|---|
+| `bun run typecheck` | Type-check without emitting (`tsc --noEmit`) |
+| `bun run build` | Build TUI component (`dist/tui.js`) |
+| `bun run build:index` | Build plugin API stub (`dist/index.js`) |
+| `bun run build:types` | Emit declaration files (`.d.ts`) |
+| `bun run build:all` | Clean + types + index + TUI (full rebuild) |
+| `bun test` | Run tests with Bun test runner |
 
-- Follow existing patterns and conventions
-- Use **immutable data structures** - never mutate existing objects
-- Keep functions small (< 50 lines)
-- Keep files focused (< 800 lines)
-- No deep nesting (> 4 levels)
-- Handle errors explicitly
-- No hardcoded values (use constants or config)
+## Code Style
 
-### 2. Testing
-
-- Write tests before implementing new features (TDD)
-- Maintain 80%+ test coverage
-- Run tests before committing:
-  ```bash
-  bun test
-  ```
-
-### 3. Commit Format
-
-Use [conventional commits](https://www.conventionalcommits.org/) format:
-
-```
-<type>: <description>
-
-[optional body]
-```
-
-Types:
-- `feat`: New features
-- `fix`: Bug fixes
-- `refactor`: Code changes without new features or bug fixes
-- `docs`: Documentation changes
-- `test`: Adding or updating tests
-- `chore`: Build process or auxiliary tool changes
-
-Examples:
-```
-feat: add compact mode for agent display
-fix: resolve sidebar width calculation issue
-docs: update installation instructions
-refactor: improve agent categorization logic
-```
+- **No `as any`** -- use `unknown` with type narrowing instead.
+- **No `@ts-ignore` or `@ts-expect-error`** -- fix the underlying type issue.
+- **File naming**: `kebab-case` for all source files.
+- **Immutability**: create new objects with spread syntax; never mutate existing objects.
+- **`@opentui/solid` imports**: only in `render.ts`. Never import it from utility modules.
+- **Interactive elements**: use `box()` with `onMouseDown`, never `text()`.
+- **All TUI strings**: single-line, preformatted, truncate-safe.
+- **Functions**: under 50 lines. **Files**: under 800 lines.
 
 ## Pull Request Process
 
-### 1. Development Branch
+1. Fork the repository and create a branch from `main`.
+2. Run `bun run build:all && bun run typecheck && bun test` before pushing.
+3. Write clear, descriptive commit messages (lowercase, imperative mood).
+4. Open a pull request against `main` with a description of the change.
+5. All CI checks must pass before merge.
 
-- Fork the repository
-- Create a feature branch from `main`
-- Use descriptive branch names:
-  ```bash
-  git checkout -b feature/add-compact-mode
-  git checkout -b fix/sidebar-width-calculation
-  ```
+## Language
 
-### 2. Development Steps
+Use English for all code comments, commit messages, issue descriptions, and pull request discussions.
 
-1. Write tests for new functionality
-2. Implement the feature
-3. Ensure all tests pass
-4. Run type checking: `bun run typecheck`
-5. Update documentation if needed
-6. Commit with descriptive messages
+## Project Context
 
-### 3. Pull Request
-
-- Push to your fork and create a PR
-- Include a clear description of changes
-- Link to any related issues
-- Ensure all automated checks pass
-- Wait for review and feedback
-
-### 4. PR Review
-
-- Address all review comments
-- Be responsive to feedback
-- Keep PRs focused on single changes
-- Update PR description based on feedback
-
-## Reporting Issues
-
-### Bug Reports
-
-When reporting bugs, please include:
-
-1. Environment details (OS, Bun version, OpenCode version)
-2. Steps to reproduce the issue
-3. Expected vs actual behavior
-4. Error messages (if any)
-5. Relevant configuration snippets
-
-### Feature Requests
-
-For feature requests, provide:
-
-1. Use case description
-2. Expected behavior
-3. Implementation suggestions (if any)
-4. Relevant context
-
-## Code Review Guidelines
-
-### Review Criteria
-
-- **Code Quality**: Readable, maintainable code
-- **Functionality**: Feature works as expected
-- **Testing**: Adequate test coverage
-- **Documentation**: Updated as needed
-- **Performance**: No significant performance regression
-- **Security**: No security vulnerabilities
-
-### Security First
-
-- Never commit secrets or sensitive information
-- Validate all external input
-- Follow security best practices
-- Report security issues privately
-
-## Local Development
-
-### Hot Reloading
-
-The plugin uses polling-based config reload. For development:
-
-```bash
-# Build after changes
-bun run build
-
-# Test the changes in OpenCode
-```
-
-### Debugging
-
-- Check OpenCode console for error messages
-- Test with different configuration scenarios
-
-## Getting Help
-
-- [GitHub Issues](https://github.com/oh-my-openagent/agents-sidebar/issues)
-- [GitHub Discussions](https://github.com/oh-my-openagent/agents-sidebar/discussions)
-- OpenCode Discord community (if available)
-
-## Release Process
-
-Maintainers handle releases. The `prepublishOnly` script ensures proper building before publishing.
-
-## License
-
-By contributing to this project, you agree that your contributions will be licensed under the MIT License.
+This is an OpenCode TUI sidebar plugin built with `@opentui/solid` and `@opencode-ai/plugin`. It displays agent lifecycle categories, collapsible sections, and model information from the [OhMyOpenAgent](https://github.com/oh-my-openagent) ecosystem. The plugin reads configuration from `~/.config/opencode/oh-my-openagent.json`.

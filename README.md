@@ -1,8 +1,6 @@
 # agents-sidebar
 
-[![Bun Version](https://img.shields.io/badge/dynamic/json?url=https://api.bun.sh/versions/latest&query=data.stable&label=bun)](https://bun.sh/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![OpenCode](https://img.shields.io/badge/Powered%20by-OpenCode-black.svg)](https://opencode.ai/)
+[![npm version](https://img.shields.io/npm/v/opencode-agents-sidebar?labelColor=black&style=flat-square)](https://www.npmjs.com/package/opencode-agents-sidebar) [![license](https://img.shields.io/badge/license-MIT-black?style=flat-square)](./LICENSE)
 
 OpenCode TUI sidebar plugin that displays all configured OhMyOpenAgent agents with lifecycle-based categories, collapsible sections, and model information.
 
@@ -28,13 +26,13 @@ OpenCode TUI sidebar plugin that displays all configured OhMyOpenAgent agents wi
 
 ## Installation
 
-### npm package
+### bun package
 
 Install the published plugin package in your OpenCode config directory:
 
 ```bash
 cd ~/.config/opencode
-npm install opencode-agents-sidebar
+bun add opencode-agents-sidebar
 ```
 
 Add the package name to your `opencode.json`:

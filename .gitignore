@@ -14,3 +14,4 @@ src/tui.ts
 *.pem
 *.key
 coverage/
+*.tgz
