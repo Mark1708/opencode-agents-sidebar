@@ -2,29 +2,35 @@ import { describe, expect, test } from "bun:test";
 import { unlink } from "node:fs/promises";
 import {
   buildAgentList,
-  compactModelLabel,
-  configFingerprint,
   filterAgents,
+  formatModelName,
+  getCategory,
+  groupByCategory,
+  orderedAgentNames,
+} from "./agents.js";
+import {
+  configFingerprint,
+  mergeConfig,
+  readConfigAsync,
+} from "./config.js";
+import {
+  compactModelLabel,
   formatAgentLine,
   formatHeaderLine,
   formatFullModelRef,
   formatModel,
-  formatModelName,
   formatProvider,
   formatSplitAgentLines,
   formatVariant,
-  getCategory,
-  groupByCategory,
   initialSectionCollapsed,
-  mergeConfig,
-  orderedAgentNames,
   padLeft,
-  readConfigAsync,
   splitModelRef,
   truncateTo,
-  type AgentEntry,
-  type OmoConfig,
-} from "./tui.js";
+} from "./format.js";
+import type {
+  AgentEntry,
+  OmoConfig,
+} from "./types.js";
 
 const SAMPLE_OMO_CONFIG: OmoConfig = {
   agents: {
