@@ -1,5 +1,7 @@
 # opencode-agents-sidebar
 
+[Русская версия](./README.ru.md)
+
 > OpenCode TUI sidebar plugin for browsing configured OhMyOpenAgent agents by lifecycle category, model, provider, and status.
 
 [![Package](https://img.shields.io/badge/npm-opencode--agents--sidebar-111827?style=for-the-badge&labelColor=111827&color=5b5ef4)](https://www.npmjs.com/package/opencode-agents-sidebar)
