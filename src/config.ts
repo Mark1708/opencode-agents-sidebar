@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { DEFAULTS } from "./defaults.js";
-import type { AliasMap, ConfigState, OmoConfig, SidebarConfig } from "./types.js";
+import type { AliasMap, ConfigState, SidebarConfig } from "./types.js";
 
 export const CONFIG_PATH = `${homedir()}/.config/opencode/oh-my-openagent.json`;
 
@@ -87,7 +87,7 @@ function parseConfigText(raw: string, path: string): ConfigState {
   try {
     const parsed = JSON.parse(raw);
     if (!isRecord(parsed)) return { kind: "invalid", path, error: "Config must be a JSON object" };
-    return { kind: "loaded", config: parsed as OmoConfig, path };
+    return { kind: "loaded", config: parsed, path };
   } catch (parseError: unknown) {
     return { kind: "invalid", path, error: shortError(parseError) };
   }
@@ -99,5 +99,8 @@ export function shortError(error: unknown): string {
 }
 
 export function sanitizeLine(value: string): string {
-  return value.replace(/[\x00-\x1F\x7F]/g, " ");
+  return [...value].map((char) => {
+    const code = char.charCodeAt(0);
+    return code <= 31 || code === 127 ? " " : char;
+  }).join("");
 }

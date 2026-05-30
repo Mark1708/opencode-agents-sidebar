@@ -1,6 +1,6 @@
 import { DEFAULTS } from "./defaults.js";
 import { sanitizeLine } from "./config.js";
-import type { AgentEntry, AliasMap, ModelDisplay, OmoConfig, SidebarConfig, SplitAgentLines, SymbolMode } from "./types.js";
+import type { AgentEntry, AliasMap, ModelDisplay, SidebarConfig, SplitAgentLines, SymbolMode } from "./types.js";
 
 export function truncateTo(value: string, width: number): string {
   const normalizedWidth = Math.max(0, width);
@@ -103,8 +103,8 @@ function formatInlineSplitAgentLines(agent: AgentEntry, config: SidebarConfig, m
   const provider = formatProvider(modelRef.provider);
   const sourcePrefix = agent.modelSource === "fallback" ? "fb:" : "";
   const model = agent.model ? `${sourcePrefix}${formatModel(modelRef.model)}` : "...";
-  const variant = formatVariant(agent.variant, config.variant_aliases);
-  const fallbackCount = agent.fallbackCount > 0 ? `+${agent.fallbackCount}` : "";
+  const variant = formatVariant(agentVariant(agent), config.variant_aliases);
+  const fallbackCount = agentFallbackCount(agent) > 0 ? `+${agentFallbackCount(agent)}` : "";
   const modelLine = [model, variant, fallbackCount].filter((part) => part.length > 0).join(" ");
   return splitAgentLines(
     truncateTo(`${fixedPrefix}${padLeft(provider, rightWidth)}`, width),
@@ -120,7 +120,7 @@ export function compactModelLabel(agent: AgentEntry, showProvider = true, config
   const modelLabel = showProvider && modelRef.provider
     ? `${shortProvider(modelRef.provider, config.provider_aliases)}/${modelName}`
     : modelName;
-  const variantLabel = shortVariant(agent.variant, config.variant_aliases);
+  const variantLabel = shortVariant(agentVariant(agent), config.variant_aliases);
   return variantLabel ? `${sourcePrefix}${modelLabel} ${variantLabel}` : `${sourcePrefix}${modelLabel}`;
 }
 
@@ -144,7 +144,7 @@ export function formatAgentLine(agent: AgentEntry, options: {
 function formatInlineAgentLine(agent: AgentEntry, showProvider: boolean, config: SidebarConfig, marker: string, width: number): string {
   const name = padRight(agent.name, config.name_width);
   const fixedPrefix = `${marker} ${name}`;
-  const suffix = agent.fallbackCount > 0 ? ` +${agent.fallbackCount}` : "";
+  const suffix = agentFallbackCount(agent) > 0 ? ` +${agentFallbackCount(agent)}` : "";
   const remaining = Math.max(0, width - fixedPrefix.length);
   const safeSuffix = suffix.length > remaining ? truncateTo(suffix, remaining) : suffix;
   const modelBudget = Math.max(0, remaining - safeSuffix.length);
@@ -161,9 +161,9 @@ export function searchableAgentText(agent: AgentEntry): string {
     agent.name,
     agent.category,
     agent.model,
-    agent.variant ?? "",
+    agentVariant(agent) ?? "",
     agent.mode ?? "",
-    ...agent.fallbacks.flatMap((fallback) => [fallback.model, fallback.variant ?? ""]),
+    ...agentFallbacks(agent).flatMap((fallback) => [fallback.model, fallback.variant ?? ""]),
   ].join(" ").toLowerCase();
 }
 
@@ -178,12 +178,29 @@ export function compactAgentLine(
   return formatAgentLine(agent, { selected, symbols, width: config.sidebar_width, modelDisplay, showProvider, config });
 }
 
-export function initialSectionCollapsed(config: OmoConfig): boolean {
-  return config.tui?.default_agents_collapsed ?? false;
-}
-
 export function formatFullModelRef(model: string | undefined, variant?: string, options?: { showVariant?: boolean }): string {
   if (!model) return "—";
   if (options?.showVariant && variant) return `${model} · ${variant}`;
   return model;
+}
+
+export function agentVariant(agent: AgentEntry): string | undefined {
+  return typeof agent.metadata.variant === "string" ? agent.metadata.variant : undefined;
+}
+
+export function agentFallbackCount(agent: AgentEntry): number {
+  return typeof agent.metadata.fallbackCount === "number" ? agent.metadata.fallbackCount : agentFallbacks(agent).length;
+}
+
+export function agentFallbacks(agent: AgentEntry): Array<{ model: string; variant?: string }> {
+  if (!Array.isArray(agent.metadata.fallback_models)) return [];
+  return agent.metadata.fallback_models.filter(isModelRef);
+}
+
+function isModelRef(value: unknown): value is { model: string; variant?: string } {
+  return typeof value === "object"
+    && value !== null
+    && "model" in value
+    && typeof value.model === "string"
+    && (!("variant" in value) || typeof value.variant === "string");
 }

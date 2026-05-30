@@ -1,44 +1,64 @@
-import { CATEGORY_MAP, DEFAULT_CATEGORY, DEFAULTS, DISABLED_CATEGORY } from "./defaults.js";
-import { mergeConfig } from "./config.js";
-import type { AgentConfig, AgentEntry, CategoryGroup, ModelSource, OmoConfig, SidebarConfig, ShowDisabledMode } from "./types.js";
+import { DEFAULTS } from "./defaults.js";
+import { groupByCategory as groupNormalizedByCategory } from "./agents/categories.js";
+import { mergeAgentSources } from "./agents/merge.js";
+import type { AgentEntry, CategoryGroup, DiagnosticWarning } from "./agents/types.js";
+import type { AgentSourceState } from "./providers/types.js";
+import type { ProviderStatusState, SidebarConfig, SidebarViewState } from "./types.js";
 import { searchableAgentText } from "./format.js";
 
 export function normalizeAgentName(name: string): string {
   return name.replaceAll("_", "-");
 }
 
-export function getCategory(name: string, agent: AgentConfig = {}, config: OmoConfig = {}): string {
-  const normalized = normalizeAgentName(name);
-  return agent.category
-    ?? config.tui?.agent_categories?.[name]
-    ?? config.tui?.agent_categories?.[normalized]
-    ?? CATEGORY_MAP[normalized]
-    ?? DEFAULT_CATEGORY;
+export function buildAgentList(sources: AgentSourceState[]): AgentEntry[] {
+  return mergeAgentSources(sources);
 }
 
-export function orderedAgentNames(config: OmoConfig): string[] {
-  const agents = config.agents ?? {};
-  const names = Object.keys(agents);
-  const ordered = (config.agent_order ?? []).filter((name, index, source) => (
-    agents[name] !== undefined && source.indexOf(name) === index
-  ));
-  const remaining = names
-    .filter((name) => !ordered.includes(name))
-    .sort((left, right) => left.localeCompare(right));
-  return [...ordered, ...remaining];
+export function buildSidebarViewState(sources: AgentSourceState[], config: SidebarConfig): SidebarViewState {
+  return {
+    kind: "loaded",
+    agents: buildAgentList(sources),
+    hasConfiguredAgents: sources.some((source) => configuredAgentCount(source) > 0),
+    sidebarConfig: config,
+    providerStatus: buildProviderStatusState(sources),
+    diagnostics: collectProviderDiagnostics(sources),
+  };
 }
 
-export function resolveModel(agent: AgentConfig): Pick<AgentEntry, "model" | "variant" | "modelSource"> {
-  const fallback = agent.fallback_models?.[0];
-  if (agent.model) return { model: agent.model, variant: agent.variant, modelSource: "primary" };
-  if (fallback?.model) return { model: fallback.model, variant: fallback.variant, modelSource: "fallback" };
-  return { model: "", modelSource: "none" };
+export function collectProviderDiagnostics(sources: AgentSourceState[]): DiagnosticWarning[] {
+  return sources.flatMap((source) => [...source.errors, ...source.warnings]);
+}
+
+export function buildProviderStatusState(sources: AgentSourceState[]): ProviderStatusState {
+  const omoSource = sources.find((source) => source.source === "oh-my-openagent");
+  const tui = readRecord(omoSource?.metadata.tui);
+  const teamMode = readRecord(omoSource?.metadata.team_mode);
+  const tmux = readRecord(omoSource?.metadata.tmux);
+  return {
+    showTeam: booleanMetadata(tui.show_team_status, true),
+    teamEnabled: booleanMetadata(teamMode.enabled, false),
+    teamMaxParallelMembers: numberMetadata(teamMode.max_parallel_members),
+    teamMaxMembers: numberMetadata(teamMode.max_members),
+    showTmux: booleanMetadata(tui.show_tmux_status, true),
+    tmuxEnabled: booleanMetadata(tmux.enabled, false),
+    tmuxMainPaneSize: numberMetadata(tmux.main_pane_size),
+  };
+}
+
+export function groupByCategory(agents: AgentEntry[], config: Pick<SidebarConfig, "category_order"> = DEFAULTS): CategoryGroup[] {
+  return groupNormalizedByCategory(agents, config);
+}
+
+export function filterAgents(agents: AgentEntry[], query: string): AgentEntry[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return agents;
+  return agents.filter((agent) => searchableAgentText(agent).includes(normalizedQuery));
 }
 
 export function formatModelName(
   model: string | undefined,
   variant?: string,
-  options: { showProvider?: boolean; modelSource?: ModelSource; config?: SidebarConfig } = {},
+  options: { showProvider?: boolean; modelSource?: AgentEntry["modelSource"]; config?: SidebarConfig } = {},
 ): string {
   if (!model) return "...";
   const config = options.config ?? DEFAULTS;
@@ -52,56 +72,6 @@ export function formatModelName(
   return [`${sourcePrefix}${formattedModel}`, variantLabel].filter((part) => part.length > 0).join(" · ");
 }
 
-export function buildAgentList(config: OmoConfig): AgentEntry[] {
-  const disabledNames = new Set(config.disabled_agents ?? []);
-  const showDisabled = mergeConfig(config.tui).show_disabled;
-  return orderedAgentNames(config).flatMap((name) => toAgentEntry(name, config, disabledNames, showDisabled));
-}
-
-function toAgentEntry(name: string, config: OmoConfig, disabledNames: Set<string>, showDisabled: ShowDisabledMode): AgentEntry[] {
-  const agent = config.agents?.[name];
-  if (!agent || agent.hidden) return [];
-  const disabled = disabledNames.has(name);
-  if (disabled && showDisabled === "hidden") return [];
-  const resolvedCategory = getCategory(name, agent, config);
-  const category = disabled && showDisabled === "grouped" ? DISABLED_CATEGORY : resolvedCategory;
-  const model = resolveModel(agent);
-  return [{
-    name,
-    category,
-    model: model.model,
-    variant: model.variant,
-    modelSource: model.modelSource,
-    fallbackCount: agent.fallback_models?.length ?? 0,
-    fallbacks: agent.fallback_models ?? [],
-    mode: agent.mode,
-    disabled,
-    hidden: agent.hidden ?? false,
-    unmapped: category === DEFAULT_CATEGORY && resolvedCategory === DEFAULT_CATEGORY,
-  }];
-}
-
-export function groupByCategory(agents: AgentEntry[], config: OmoConfig = {}): CategoryGroup[] {
-  const preferred = mergeConfig(config.tui).category_order;
-  const categories = [...new Set(agents.map((agent) => agent.category))];
-  const orderedExtras = categories
-    .filter((category) => !preferred.includes(category))
-    .sort((left, right) => left.localeCompare(right));
-  return [...preferred, ...orderedExtras]
-    .map((category) => ({
-      category,
-      agents: agents.filter((agent) => agent.category === category),
-      hasUnmapped: category === DEFAULT_CATEGORY && agents.some((agent) => agent.unmapped),
-    }))
-    .filter((group) => group.agents.length > 0);
-}
-
-export function filterAgents(agents: AgentEntry[], query: string): AgentEntry[] {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return agents;
-  return agents.filter((agent) => searchableAgentText(agent).includes(normalizedQuery));
-}
-
 function splitModelRefLocal(model: string): { provider: string; model: string } {
   const slash = model.indexOf("/");
   if (slash === -1) return { provider: "", model };
@@ -110,4 +80,25 @@ function splitModelRefLocal(model: string): { provider: string; model: string } 
 
 function shortAlias(value: string, aliases: Record<string, string>): string {
   return aliases[value] ?? value;
+}
+
+function configuredAgentCount(source: AgentSourceState): number {
+  const value = source.metadata.configuredAgentCount;
+  return typeof value === "number" && Number.isFinite(value) ? value : source.agents.length;
+}
+
+function readRecord(value: unknown): Record<string, unknown> {
+  return isRecord(value) ? value : {};
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function booleanMetadata(value: unknown, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function numberMetadata(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }

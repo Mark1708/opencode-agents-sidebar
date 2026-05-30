@@ -2,15 +2,15 @@ import type { SidebarConfig } from "./types.js";
 
 export const DEFAULT_CATEGORY = "Other";
 export const DISABLED_CATEGORY = "Disabled";
-export const DEFAULT_COLLAPSED_CATEGORIES = ["Orchestration", "Research", "Architecture", "Review", "Engineering", "Operations", "Analytics", "Consulting"];
+export const DEFAULT_COLLAPSED_CATEGORIES: string[] = [];
 
 export const DEFAULTS: SidebarConfig & { default_collapsed: string[] } = {
   sidebar_width: 34,
   name_width: 18,
   poll_interval_ms: 2000,
   slot_order: 850,
-  title: "OmO Agents",
-  category_order: ["Orchestration", "Research", "Architecture", "Review", "Engineering", "Operations", "Analytics", "Consulting", "Other"],
+  title: "Agents",
+  category_order: ["Primary", "Subagents", "Built-in", "Project", "Global", "Custom", "Disabled", "Hidden", "Other"],
   default_collapsed: DEFAULT_COLLAPSED_CATEGORIES,
   model_display: "details-only",
   show_provider: true,
@@ -37,39 +37,3 @@ export const DEFAULTS: SidebarConfig & { default_collapsed: string[] } = {
 };
 
 export const DEFAULT_CATEGORY_ORDER = DEFAULTS.category_order;
-
-export const CATEGORY_MAP: Record<string, string> = {
-  sisyphus: "Orchestration",
-  hephaestus: "Orchestration",
-  prometheus: "Orchestration",
-  atlas: "Orchestration",
-  "sisyphus-junior": "Orchestration",
-  oracle: "Research",
-  librarian: "Research",
-  explore: "Research",
-  metis: "Research",
-  momus: "Research",
-  "multimodal-looker": "Research",
-  planner: "Architecture",
-  architect: "Architecture",
-  "code-architect": "Architecture",
-  "code-reviewer": "Review",
-  "typescript-reviewer": "Review",
-  "python-reviewer": "Review",
-  "go-reviewer": "Review",
-  "rust-reviewer": "Review",
-  "java-reviewer": "Review",
-  "kotlin-reviewer": "Review",
-  "security-auditor": "Review",
-  "devops-reviewer": "Review",
-  "backend-dev": "Engineering",
-  "test-writer": "Engineering",
-  "docs-writer": "Engineering",
-  "build-error-resolver": "Operations",
-  "e2e-runner": "Operations",
-  "release-manager": "Operations",
-  "database-specialist": "Operations",
-  "data-analyst": "Analytics",
-  "vision-processor": "Analytics",
-  "health-consultant": "Consulting",
-};
