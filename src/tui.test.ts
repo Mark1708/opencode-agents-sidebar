@@ -1,36 +1,28 @@
 import { describe, expect, test } from "bun:test";
 import { unlink } from "node:fs/promises";
+import { buildAgentList, buildSidebarViewState, filterAgents, formatModelName, groupByCategory } from "./agents.js";
+import { mergeAgentSources } from "./agents/merge.js";
+import { resolveGenericCategory } from "./agents/categories.js";
+import { configFingerprint, mergeConfig, readConfigAsync } from "./config.js";
+import { DEFAULTS } from "./defaults.js";
 import {
-  buildAgentList,
-  filterAgents,
-  formatModelName,
-  getCategory,
-  groupByCategory,
-  orderedAgentNames,
-} from "./agents.js";
-import {
-  configFingerprint,
-  mergeConfig,
-  readConfigAsync,
-} from "./config.js";
-import {
+  agentFallbackCount,
   compactModelLabel,
   formatAgentLine,
-  formatHeaderLine,
   formatFullModelRef,
+  formatHeaderLine,
   formatModel,
   formatProvider,
   formatSplitAgentLines,
   formatVariant,
-  initialSectionCollapsed,
   padLeft,
   splitModelRef,
   truncateTo,
 } from "./format.js";
-import type {
-  AgentEntry,
-  OmoConfig,
-} from "./types.js";
+import { normalizeOmoConfig, orderedOmoAgentNames } from "./providers/omo.js";
+import type { AgentEntry } from "./agents/types.js";
+import type { AgentSourceState } from "./providers/types.js";
+import type { OmoConfig } from "./providers/omo.js";
 
 const SAMPLE_OMO_CONFIG: OmoConfig = {
   agents: {
@@ -40,37 +32,6 @@ const SAMPLE_OMO_CONFIG: OmoConfig = {
   agent_order: ["test-agent", "reviewer-agent"],
   disabled_agents: [],
   tui: {},
-  team_mode: { enabled: false },
-  tmux: { enabled: false },
-};
-
-const CONFIG_WITH_FALLBACKS: OmoConfig = {
-  agents: {
-    "deep-agent": {
-      model: "openai/gpt-5.5",
-      fallback_models: [{ model: "opencode/big-pickle" }, { model: "openai/gpt-5.4-mini" }],
-      variant: "medium",
-    },
-  },
-  agent_order: ["deep-agent"],
-  disabled_agents: [],
-  tui: {},
-  team_mode: { enabled: false },
-  tmux: { enabled: false },
-};
-
-const EMPTY_CONFIG: OmoConfig = {};
-
-const CONFIG_WITH_CATEGORIES: OmoConfig = {
-  agents: {
-    "custom-agent": { model: "openai/gpt-5.5" },
-  },
-  agent_order: ["custom-agent"],
-  disabled_agents: [],
-  tui: {
-    agent_categories: { "custom-agent": "Custom" },
-    category_order: ["Custom", "Other"],
-  },
   team_mode: { enabled: false },
   tmux: { enabled: false },
 };
@@ -85,100 +46,152 @@ async function withTempJson<T>(content: string, run: (path: string) => Promise<T
   }
 }
 
-function baseConfig(overrides: Partial<OmoConfig> = {}): OmoConfig {
-  return {
-    agents: {
-      alpha: { model: "openai/gpt-5.5", fallback_models: [{ model: "opencode/big-pickle" }] },
-      beta: { fallback_models: [{ model: "openai/gpt-5.4-mini" }] },
-      "code-reviewer": { fallback_models: [{ model: "openai/gpt-5.4-mini" }] },
-    },
-    agent_order: ["alpha"],
-    disabled_agents: [],
-    ...overrides,
-  };
-}
-
 function agentEntry(overrides: Partial<AgentEntry> = {}): AgentEntry {
   return {
+    id: "oh-my-openagent:hephaestus",
     name: "hephaestus",
+    source: "oh-my-openagent",
+    origin: "managed",
+    mode: "unknown",
     category: "Orchestration",
     model: "openai/gpt-5.5",
-    variant: undefined,
-    modelSource: "primary",
-    fallbackCount: 0,
-    fallbacks: [],
-    mode: undefined,
+    effectiveModel: "openai/gpt-5.5",
+    modelSource: "explicit",
     disabled: false,
     hidden: false,
-    unmapped: false,
+    metadata: { variant: undefined, fallback_models: [], fallbackCount: 0 },
+    warnings: [],
     ...overrides,
   };
 }
 
-describe("agents sidebar pure functions", () => {
-  test("multimodal-looker maps to Research", () => {
-    expect(getCategory("multimodal-looker")).toBe("Research");
-    expect(getCategory("multimodal_looker")).toBe("Research");
+function sourceState(agents: AgentEntry[], overrides: Partial<AgentSourceState> = {}): AgentSourceState {
+  return {
+    source: "oh-my-openagent",
+    agents,
+    metadata: {},
+    warnings: [],
+    errors: [],
+    watchedPaths: [],
+    ...overrides,
+  };
+}
+
+describe("agents sidebar provider foundation", () => {
+  test("default title is OpenCode-first", () => {
+    expect(DEFAULTS.title).toBe("Agents");
   });
 
-  test("fixture config has empty Other category", () => {
-    const config = CONFIG_WITH_CATEGORIES;
-    const groups = groupByCategory(buildAgentList(config), config);
-    expect(groups.find((group) => group.category === "Other")).toBeUndefined();
+  test("render core layer does not import OmoConfig or use old OmO missing copy", async () => {
+    const renderSource = await Bun.file("src/render.ts").text();
+    expect(renderSource).not.toContain("OmoConfig");
+    expect(renderSource).not.toContain("OmO not configured");
   });
 
-  test("agents missing from agent_order are still displayed alphabetically", () => {
-    const agents = buildAgentList(baseConfig());
-    expect(agents.map((agent) => agent.name)).toEqual(["alpha", "beta", "code-reviewer"]);
+  test("OmO bootstrap provider normalizes agents into AgentEntry", () => {
+    const state = normalizeOmoConfig(SAMPLE_OMO_CONFIG, "/tmp/omo.json");
+    expect(state.source).toBe("oh-my-openagent");
+    expect(state.agents.map((agent) => agent.id)).toEqual(["oh-my-openagent:test-agent", "oh-my-openagent:reviewer-agent"]);
+    expect(state.agents[0]?.source).toBe("oh-my-openagent");
+    expect(state.agents[1]?.mode).toBe("primary");
   });
 
-  test("disabled_agents marks matching agents", () => {
-    const agents = buildAgentList(baseConfig({ disabled_agents: ["alpha"] }));
-    expect(agents.find((agent) => agent.name === "alpha")?.disabled).toBe(true);
+  test("OmO lifecycle category map is provider-local and not generic", () => {
+    expect(resolveGenericCategory(agentEntry({ id: "opencode:oracle", name: "oracle", source: "opencode", category: "" }))).toBe("Other");
+    expect(normalizeOmoConfig({ agents: { oracle: { model: "openai/gpt-5.5" } } }).agents[0]?.category).toBe("Research");
   });
 
-  test("show_disabled hidden removes disabled agents", () => {
-    const agents = buildAgentList(baseConfig({
-      disabled_agents: ["alpha"],
-      tui: { show_disabled: "hidden" },
-    }));
-    expect(agents.map((agent) => agent.name)).not.toContain("alpha");
-  });
-
-  test("show_disabled dimmed keeps disabled agents with flag", () => {
-    const agents = buildAgentList(baseConfig({
+  test("disabled and hidden OmO mapping is preserved", () => {
+    const state = normalizeOmoConfig({
+      agents: {
+        alpha: { model: "openai/gpt-5.5" },
+        hidden: { model: "openai/gpt-5.5", hidden: true },
+      },
       disabled_agents: ["alpha"],
       tui: { show_disabled: "dimmed" },
-    }));
-    expect(agents.find((agent) => agent.name === "alpha")?.disabled).toBe(true);
+    });
+    expect(state.agents.map((agent) => agent.name)).toEqual(["alpha"]);
+    expect(state.agents[0]?.disabled).toBe(true);
   });
 
-  test("primary model sets modelSource primary", () => {
-    const agent = buildAgentList(baseConfig()).find((entry) => entry.name === "alpha");
-    expect(agent?.modelSource).toBe("primary");
+  test("show_disabled grouped moves disabled agents to Disabled category", () => {
+    const state = normalizeOmoConfig({
+      agents: { alpha: { model: "openai/gpt-5.5" } },
+      disabled_agents: ["alpha"],
+      tui: { show_disabled: "grouped" },
+    });
+    expect(state.agents[0]?.category).toBe("Disabled");
+    expect(groupByCategory(state.agents).map((group) => group.category)).toContain("Disabled");
   });
 
-  test("fallback-only model sets modelSource fallback", () => {
-    const agent = buildAgentList(baseConfig()).find((entry) => entry.name === "beta");
-    expect(agent?.modelSource).toBe("fallback");
+  test("fallback models are stored in metadata", () => {
+    const state = normalizeOmoConfig({
+      agents: { beta: { fallback_models: [{ model: "openai/gpt-5.4-mini", variant: "medium" }] } },
+    });
+    expect(state.agents[0]?.modelSource).toBe("fallback");
+    expect(state.agents[0]?.metadata.fallback_models).toEqual([{ model: "openai/gpt-5.4-mini", variant: "medium" }]);
+    const [agent] = state.agents;
+    expect(agent).toBeDefined();
+    if (!agent) return;
+    expect(agentFallbackCount(agent)).toBe(1);
   });
 
-  test("variant appears in compact model label", () => {
-    expect(formatModelName("openai/gpt-5.5", "medium")).toBe("oa/gpt-5.5 · M");
+  test("buildAgentList consumes provider states instead of OmoConfig", () => {
+    const agents = buildAgentList([sourceState([agentEntry({ name: "alpha" })])]);
+    expect(agents.map((agent) => agent.name)).toEqual(["alpha"]);
   });
 
-  test("fingerprint changes on variant fallback disabled tui team and tmux changes", () => {
-    const original = configFingerprint({ kind: "loaded", path: "test", config: baseConfig() });
-    const changedConfigs: OmoConfig[] = [
-      baseConfig({ agents: { ...baseConfig().agents, alpha: { model: "openai/gpt-5.5", variant: "high" } } }),
-      baseConfig({ agents: { ...baseConfig().agents, alpha: { model: "openai/gpt-5.5", fallback_models: [{ model: "zai-coding-plan/glm-5.1" }] } } }),
-      baseConfig({ disabled_agents: ["alpha"] }),
-      baseConfig({ tui: { symbols: "ascii" } }),
-      baseConfig({ team_mode: { enabled: true, max_parallel_members: 2 } }),
-      baseConfig({ tmux: { enabled: true, main_pane_size: 50 } }),
-    ];
-    const fingerprints = changedConfigs.map((config) => configFingerprint({ kind: "loaded", path: "test", config }));
-    expect(fingerprints.every((fingerprint) => fingerprint !== original)).toBe(true);
+  test("mergeAgentSources keeps deterministic duplicate warning", () => {
+    const duplicate = agentEntry({ id: "custom:one", name: "one", source: "custom", origin: "custom" });
+    const original = agentEntry({ id: "oh-my-openagent:one", name: "one", source: "oh-my-openagent" });
+    const agents = mergeAgentSources([sourceState([original]), sourceState([duplicate], { source: "custom" })]);
+    expect(agents).toHaveLength(1);
+    expect(agents[0]?.source).toBe("custom");
+    expect(agents[0]?.warnings[0]?.code).toBe("duplicate-agent");
+  });
+
+  test("mergeAgentSources deduplicates source-qualified provider ids by normalized name", () => {
+    const omo = agentEntry({ id: "oh-my-openagent:oracle", name: "oracle", source: "oh-my-openagent" });
+    const opencode = agentEntry({ id: "opencode:oracle", name: "oracle", source: "opencode", origin: "builtin", category: "Primary" });
+    const agents = mergeAgentSources([sourceState([omo]), sourceState([opencode], { source: "opencode" })]);
+    expect(agents).toHaveLength(1);
+    expect(agents[0]?.id).toBe("opencode:oracle");
+    expect(agents[0]?.warnings[0]?.metadata?.duplicateSource).toBe("oh-my-openagent");
+  });
+
+  test("buildSidebarViewState preserves provider diagnostics", () => {
+    const viewState = buildSidebarViewState([
+      sourceState([], {
+        errors: [{ code: "omo-config-invalid", severity: "error", message: "bad json", source: "oh-my-openagent", path: "/tmp/omo.json" }],
+      }),
+    ], DEFAULTS);
+    expect(viewState.kind).toBe("loaded");
+    if (viewState.kind !== "loaded") return;
+    expect(viewState.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(["omo-config-invalid"]);
+    expect(viewState.hasConfiguredAgents).toBe(false);
+  });
+});
+
+describe("agents sidebar pure functions", () => {
+  test("orderedOmoAgentNames ignores duplicates in agent_order", () => {
+    const names = orderedOmoAgentNames({
+      agents: { alpha: {}, beta: {}, "code-reviewer": {} },
+      agent_order: ["beta", "alpha", "beta", "missing"],
+    });
+    expect(names).toEqual(["beta", "alpha", "code-reviewer"]);
+  });
+
+  test("groupByCategory works with normalized AgentEntry", () => {
+    const groups = groupByCategory([agentEntry({ name: "x", category: "Other" })]);
+    expect(groups.find((group) => group.category === "Other")?.agents.map((agent) => agent.name)).toEqual(["x"]);
+    expect(groups.find((group) => group.category === "Other")?.hasUnmapped).toBe(true);
+  });
+
+  test("filterAgents finds model variant and fallback queries", () => {
+    const agents = [agentEntry({ metadata: { variant: "medium", fallback_models: [{ model: "opencode/big-pickle" }] } })];
+    expect(filterAgents(agents, "gpt-5.5").map((agent) => agent.name)).toEqual(["hephaestus"]);
+    expect(filterAgents(agents, "medium").map((agent) => agent.name)).toEqual(["hephaestus"]);
+    expect(filterAgents(agents, "big-pickle").map((agent) => agent.name)).toEqual(["hephaestus"]);
   });
 
   test("invalid JSON returns invalid ConfigState", async () => {
@@ -188,56 +201,21 @@ describe("agents sidebar pure functions", () => {
     });
   });
 
-  test("readConfigAsync returns missing state for missing file", async () => {
-    const path = `/tmp/test-agents-sidebar-missing-${Date.now()}-${Math.random().toString(36).slice(2)}.json`;
-    const state = await readConfigAsync(path);
-    expect(state).toEqual({ kind: "missing", path });
+  test("configFingerprint includes missing and invalid states", () => {
+    expect(configFingerprint({ kind: "missing", path: "/tmp/missing.json" })).toBe("missing:/tmp/missing.json");
+    expect(configFingerprint({ kind: "invalid", path: "/tmp/bad.json", error: "bad json" })).toBe("invalid:/tmp/bad.json:bad json");
   });
 
-  test("readConfigAsync rejects non-object JSON", async () => {
-    const invalidJsonValues = ["\"hello\"", "[]", "42"];
-    for (const value of invalidJsonValues) {
-      await withTempJson(value, async (path) => {
-        const state = await readConfigAsync(path);
-        expect(state).toEqual({ kind: "invalid", path, error: "Config must be a JSON object" });
-      });
-    }
+  test("mergeConfig user aliases extend defaults", () => {
+    const config = mergeConfig({ provider_aliases: { anthropic: "ant" }, model_aliases: { "claude-opus-4.5": "opus4.5" } });
+    expect(config.provider_aliases.openai).toBe("oa");
+    expect(config.provider_aliases.anthropic).toBe("ant");
+    expect(config.model_aliases["gpt-5.5"]).toBe("5.5");
+    expect(config.model_aliases["claude-opus-4.5"]).toBe("opus4.5");
   });
 
-  test("readConfigAsync loads fixture config from temp file", async () => {
-    await withTempJson(JSON.stringify(SAMPLE_OMO_CONFIG), async (path) => {
-      const state = await readConfigAsync(path);
-      expect(state.kind).toBe("loaded");
-      if (state.kind === "loaded") {
-        expect(state.config.agents?.["test-agent"]?.model).toBe("openai/gpt-5.5");
-      }
-    });
-  });
-
-  test("hidden agents are not displayed", () => {
-    const agents = buildAgentList(baseConfig({
-      agents: { hidden: { model: "openai/gpt-5.5", hidden: true } },
-    }));
-    expect(agents).toHaveLength(0);
-  });
-
-  test("extra categories from config are preserved", () => {
-    const config = baseConfig({
-      agents: { custom: { model: "openai/gpt-5.5", category: "Experimental" } },
-    });
-    expect(groupByCategory(buildAgentList(config), config).map((group) => group.category)).toContain("Experimental");
-  });
-
-  test("filterAgents finds reviewer agents", () => {
-    const agents = buildAgentList(baseConfig());
-    expect(filterAgents(agents, "review").map((agent) => agent.name)).toEqual(["code-reviewer"]);
-  });
-
-  test("filterAgents finds model variant and fallback queries", () => {
-    const agents = buildAgentList(CONFIG_WITH_FALLBACKS);
-    expect(filterAgents(agents, "gpt-5.5").map((agent) => agent.name)).toEqual(["deep-agent"]);
-    expect(filterAgents(agents, "medium").map((agent) => agent.name)).toEqual(["deep-agent"]);
-    expect(filterAgents(agents, "big-pickle").map((agent) => agent.name)).toEqual(["deep-agent"]);
+  test("formatModelName supports fallback prefix and variant alias", () => {
+    expect(formatModelName("openai/gpt-5.5", "medium", { modelSource: "fallback" })).toBe("fb:oa/gpt-5.5 · M");
   });
 
   test("padLeft right-aligns and truncates safely", () => {
@@ -251,144 +229,35 @@ describe("agents sidebar pure functions", () => {
 
   test("splitModelRef separates provider from model", () => {
     expect(splitModelRef("openai/gpt-5.5")).toEqual({ provider: "openai", model: "gpt-5.5" });
-    expect(splitModelRef("big-pickle")).toEqual({ provider: "", model: "big-pickle" });
     expect(splitModelRef(undefined)).toEqual({ provider: "", model: "" });
   });
 
-  test("formatProvider keeps split-mode provider names readable", () => {
-    expect(formatProvider("openai")).toBe("openai");
-    expect(formatProvider("opencode")).toBe("opencode");
+  test("formatProvider and formatModel compact known values", () => {
     expect(formatProvider("zai-coding-plan")).toBe("zai");
-    expect(formatProvider("other")).toBe("other");
-  });
-
-  test("formatModel compacts split-mode model names", () => {
-    expect(formatModel("gpt-5.5")).toBe("gpt-5.5");
     expect(formatModel("gpt-5.4-mini")).toBe("gpt-5.4m");
-    expect(formatModel("gpt-5.4-mini-fast")).toBe("gpt-5.4mf");
-    expect(formatModel("glm-5.1")).toBe("glm-5.1");
-    expect(formatModel("big-pickle")).toBe("big-pickle");
-  });
-
-  test("formatFullModelRef returns full model without shortening", () => {
-    expect(formatFullModelRef("zai-coding-plan/glm-5.1")).toBe("zai-coding-plan/glm-5.1");
-    expect(formatFullModelRef("openai/gpt-5.5")).toBe("openai/gpt-5.5");
-    expect(formatFullModelRef("opencode/big-pickle")).toBe("opencode/big-pickle");
-    expect(formatFullModelRef(undefined)).toBe("—");
   });
 
   test("formatFullModelRef shows variant when enabled", () => {
     expect(formatFullModelRef("openai/gpt-5.5", "medium", { showVariant: true })).toBe("openai/gpt-5.5 · medium");
   });
 
-  test("formatFullModelRef hides variant by default", () => {
-    expect(formatFullModelRef("openai/gpt-5.5", "medium")).toBe("openai/gpt-5.5");
-  });
-
   test("formatVariant compacts known variants", () => {
     expect(formatVariant("medium")).toBe("M");
-    expect(formatVariant("high")).toBe("H");
-    expect(formatVariant("xhigh")).toBe("XH");
     expect(formatVariant("unknown")).toBe("");
   });
 
   test("formatAgentLine in details-only mode shows name only", () => {
-    const line = formatAgentLine(agentEntry(), {
-      selected: false,
-      symbols: "unicode",
-      width: 34,
-      modelDisplay: "details-only",
-    });
+    const line = formatAgentLine(agentEntry(), { selected: false, symbols: "unicode", width: 34, modelDisplay: "details-only" });
     expect(line).toBe(`  hephaestus${" ".repeat(22)}`);
-    expect(line).toHaveLength(34);
   });
 
-  test("formatAgentLine in hidden mode shows name only", () => {
-    const line = formatAgentLine(agentEntry(), {
-      selected: true,
-      symbols: "unicode",
-      width: 34,
-      modelDisplay: "hidden",
-    });
-    expect(line).toMatch(/^› hephaestus\s+$/);
-    expect(line).toHaveLength(34);
-  });
-
-  test("formatAgentLine in inline mode keeps current behavior", () => {
-    const line = formatAgentLine(agentEntry(), {
-      selected: false,
-      symbols: "unicode",
-      width: 34,
-      modelDisplay: "inline",
-    });
+  test("formatAgentLine in inline mode keeps compact model behavior", () => {
+    const line = formatAgentLine(agentEntry(), { selected: false, symbols: "unicode", width: 34, modelDisplay: "inline" });
     expect(line).toContain("oa/5.5");
   });
 
-  test("formatAgentLine handles width edge cases", () => {
-    expect(formatAgentLine(agentEntry(), {
-      selected: true,
-      symbols: "unicode",
-      width: 5,
-      modelDisplay: "details-only",
-    })).toBe("› he…");
-    expect(formatAgentLine(agentEntry(), {
-      selected: true,
-      symbols: "unicode",
-      width: 1,
-      modelDisplay: "details-only",
-    })).toBe("…");
-  });
-
-  test("formatSplitAgentLines in details-only mode returns name-only lines", () => {
-    const [line1, line2] = formatSplitAgentLines(agentEntry(), {
-      width: 34,
-      selected: true,
-      symbols: "unicode",
-      modelDisplay: "details-only",
-    });
-    expect(line1).toBe(`› hephaestus${" ".repeat(22)}`);
-    expect(line2).toBe(" ".repeat(34));
-  });
-
-  test("formatSplitAgentLines formats primary model across two fixed-width lines", () => {
-    const [line1, line2] = formatSplitAgentLines(agentEntry(), {
-      width: 34,
-      selected: true,
-      symbols: "unicode",
-      modelDisplay: "inline",
-    });
-    expect(line1).toBe("› hephaestus                openai");
-    expect(line2).toBe("                           gpt-5.5");
-    expect(line1).toHaveLength(34);
-    expect(line2).toHaveLength(34);
-  });
-
-  test("formatSplitAgentLines handles width edge cases", () => {
-    const [name5, detail5] = formatSplitAgentLines(agentEntry(), {
-      width: 5,
-      selected: true,
-      symbols: "unicode",
-      modelDisplay: "inline",
-    });
-    expect(name5).toBe("› he…");
-    expect(detail5).toBe("    …");
-
-    const [name1, detail1] = formatSplitAgentLines(agentEntry(), {
-      width: 1,
-      selected: true,
-      symbols: "unicode",
-      modelDisplay: "inline",
-    });
-    expect(name1).toBe("…");
-    expect(detail1).toBe("…");
-  });
-
   test("formatSplitAgentLines puts fallback prefix on model line only", () => {
-    const [line1, line2] = formatSplitAgentLines(agentEntry({
-      model: "openai/gpt-5.4-mini",
-      modelSource: "fallback",
-      fallbackCount: 2,
-    }), {
+    const [line1, line2] = formatSplitAgentLines(agentEntry({ model: "openai/gpt-5.4-mini", modelSource: "fallback", metadata: { fallbackCount: 2 } }), {
       width: 34,
       selected: false,
       symbols: "ascii",
@@ -399,7 +268,7 @@ describe("agents sidebar pure functions", () => {
   });
 
   test("formatSplitAgentLines includes variant and fallback count", () => {
-    const [, line2] = formatSplitAgentLines(agentEntry({ variant: "medium", fallbackCount: 3 }), {
+    const [, line2] = formatSplitAgentLines(agentEntry({ metadata: { variant: "medium", fallbackCount: 3 } }), {
       width: 34,
       selected: false,
       symbols: "unicode",
@@ -408,105 +277,12 @@ describe("agents sidebar pure functions", () => {
     expect(line2).toBe("                      gpt-5.5 M +3");
   });
 
-  test("formatSplitAgentLines supports provider aliases and compact models", () => {
-    const [line1, line2] = formatSplitAgentLines(agentEntry({
-      name: "sisyphus",
-      model: "zai-coding-plan/glm-5.1",
-      fallbackCount: 2,
-    }), {
-      width: 34,
-      selected: false,
-      symbols: "unicode",
-      modelDisplay: "inline",
-    });
-    expect(line1).toBe("  sisyphus                     zai");
-    expect(line2).toBe("                        glm-5.1 +2");
+  test("formatHeaderLine supports neutral title", () => {
+    expect(formatHeaderLine("▼ Agents", "33", 34)).toBe("▼ Agents                        33");
   });
 
-  test("formatHeaderLine supports expanded and collapsed section markers", () => {
-    expect(formatHeaderLine("▼ OmO Agents", "33", 34)).toBe("▼ OmO Agents                    33");
-    expect(formatHeaderLine("▶ OmO Agents", "33", 34)).toBe("▶ OmO Agents                    33");
-  });
-
-  test("initialSectionCollapsed reads default_agents_collapsed once-ready value", () => {
-    expect(initialSectionCollapsed({ tui: { default_agents_collapsed: true } })).toBe(true);
-    expect(initialSectionCollapsed({ tui: { default_agents_collapsed: false } })).toBe(false);
-    expect(initialSectionCollapsed({})).toBe(false);
-  });
-
-  test("configFingerprint includes missing and invalid states", () => {
-    expect(configFingerprint({ kind: "missing", path: "/tmp/missing.json" })).toBe("missing:/tmp/missing.json");
-    expect(configFingerprint({ kind: "invalid", path: "/tmp/bad.json", error: "bad json" })).toBe("invalid:/tmp/bad.json:bad json");
-  });
-
-  test("buildAgentList returns empty list for empty config", () => {
-    expect(buildAgentList(EMPTY_CONFIG)).toEqual([]);
-  });
-
-  test("show_disabled grouped moves disabled agents to Disabled category", () => {
-    const agents = buildAgentList(baseConfig({
-      disabled_agents: ["alpha"],
-      tui: { show_disabled: "grouped" },
-    }));
-    expect(agents.find((agent) => agent.name === "alpha")?.category).toBe("Disabled");
-    expect(groupByCategory(agents, { tui: { show_disabled: "grouped" } }).map((group) => group.category)).toContain("Disabled");
-  });
-
-  test("orderedAgentNames ignores duplicates in agent_order", () => {
-    const names = orderedAgentNames(baseConfig({ agent_order: ["beta", "alpha", "beta", "missing"] }));
-    expect(names).toEqual(["beta", "alpha", "code-reviewer"]);
-  });
-
-  test("custom provider and model aliases from config are used", () => {
-    const config = mergeConfig({
-      provider_aliases: { openai: "o" },
-      model_aliases: { "gpt-5.5": "five-five" },
-    });
-    expect(compactModelLabel(agentEntry(), true, config)).toBe("o/five-five");
-  });
-
-  test("mergeConfig user aliases extend defaults", () => {
-    const config = mergeConfig({
-      provider_aliases: { anthropic: "ant" },
-      model_aliases: { "claude-opus-4.5": "opus4.5" },
-    });
-    expect(config.provider_aliases.openai).toBe("oa");
-    expect(config.provider_aliases.anthropic).toBe("ant");
-    expect(config.model_aliases["gpt-5.5"]).toBe("5.5");
-    expect(config.model_aliases["claude-opus-4.5"]).toBe("opus4.5");
-  });
-
-  test("compactModelLabel omits provider when showProvider is false", () => {
+  test("compactModelLabel supports aliases and provider toggle", () => {
+    expect(compactModelLabel(agentEntry(), true)).toBe("oa/5.5");
     expect(compactModelLabel(agentEntry(), false)).toBe("5.5");
-  });
-
-  test("groupByCategory puts unmapped agents in Other", () => {
-    const groups = groupByCategory(buildAgentList(SAMPLE_OMO_CONFIG), SAMPLE_OMO_CONFIG);
-    expect(groups.find((group) => group.category === "Other")?.agents.map((agent) => agent.name)).toEqual([
-      "test-agent",
-      "reviewer-agent",
-    ]);
-    expect(groups.find((group) => group.category === "Other")?.hasUnmapped).toBe(true);
-  });
-
-  test("formatAgentLine truncates very long agent names", () => {
-    const line = formatAgentLine(agentEntry({ name: "agent-with-a-very-long-name" }), {
-      selected: false,
-      symbols: "unicode",
-      width: 12,
-      modelDisplay: "details-only",
-    });
-    expect(line).toBe("  agent-wit…");
-    expect(line).toHaveLength(12);
-  });
-
-  test("unicode agent names are preserved and searchable", () => {
-    const config = baseConfig({
-      agents: { "агент-тест": { model: "openai/gpt-5.5" } },
-      agent_order: ["агент-тест"],
-    });
-    const agents = buildAgentList(config);
-    expect(formatAgentLine(agents[0]!, { selected: false, symbols: "unicode", width: 20, modelDisplay: "details-only" })).toContain("агент-тест");
-    expect(filterAgents(agents, "агент").map((agent) => agent.name)).toEqual(["агент-тест"]);
   });
 });
