@@ -54,4 +54,4 @@ Use English for all code comments, commit messages, issue descriptions, and pull
 
 ## Project Context
 
-This is an OpenCode TUI sidebar plugin built with `@opentui/solid` and `@opencode-ai/plugin`. It displays agent lifecycle categories, collapsible sections, and model information from the [OhMyOpenAgent](https://github.com/oh-my-openagent) ecosystem. The plugin reads configuration from `~/.config/opencode/oh-my-openagent.json`.
+This is an OpenCode TUI sidebar plugin built with `@opentui/solid` and `@opencode-ai/plugin`. It displays normalized provider agents, collapsible sections, and model information. In the Phase 0/1 foundation, [OhMyOpenAgent](https://github.com/oh-my-openagent) metadata remains only a temporary bootstrap source until the OpenCode-native provider is added.
