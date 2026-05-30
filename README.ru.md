@@ -14,7 +14,7 @@
 | Статус | Активно поддерживаемый персональный OpenCode tool/plugin |
 | Тип | OpenCode TUI plugin / host extension |
 | Host app | Документирован OpenCode `>= v1.14.49`; peer dependency `@opencode-ai/plugin >=1.4.0` |
-| Package | `opencode-agents-sidebar` `1.0.7`, опубликован в npm |
+| Package | `opencode-agents-sidebar` `1.0.8`, опубликован в npm |
 | Runtime | Bun `>=1.1.0` |
 | Проверки maintainer | `bun install && bun run build:all && bun test && bun run typecheck` |
 

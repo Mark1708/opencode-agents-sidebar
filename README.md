@@ -14,7 +14,7 @@
 | Status | Actively maintained personal OpenCode tool/plugin |
 | Type | OpenCode TUI plugin / host extension |
 | Host app | OpenCode `>= v1.14.49` documented; `@opencode-ai/plugin >=1.4.0` peer dependency |
-| Package | `opencode-agents-sidebar` `1.0.7`, published on npm |
+| Package | `opencode-agents-sidebar` `1.0.8`, published on npm |
 | Runtime | Bun `>=1.1.0` |
 | Maintainer checks | `bun install && bun run build:all && bun test && bun run typecheck` |
 

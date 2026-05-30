@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2026-05-30
+
+### Changed
+
+- Add provider-boundary foundation for normalized OpenCode-first agent rendering.
+- Route sidebar state, grouping, formatting, diagnostics, and docs through provider-oriented terminology.
+- Refresh README metadata and sidebar screenshots for the provider foundation release.
+
 ## [1.0.7] - 2025-05-22
 
 ### Fixed
@@ -53,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial changelog tracking for opencode-agents-sidebar.
 
+[1.0.8]: https://github.com/Mark1708/opencode-agents-sidebar/releases/tag/v1.0.8
 [1.0.7]: https://github.com/Mark1708/opencode-agents-sidebar/releases/tag/v1.0.7
 [1.0.6]: https://github.com/Mark1708/opencode-agents-sidebar/releases/tag/v1.0.6
 [1.0.5]: https://github.com/Mark1708/opencode-agents-sidebar/releases/tag/v1.0.5
