@@ -273,4 +273,5 @@ team 2/4
 - Package: <https://www.npmjs.com/package/opencode-agents-sidebar>
 - Repository: <https://github.com/Mark1708/opencode-agents-sidebar>
 - Host app: <https://opencode.ai/>
+- Включён в раздел Plugins курируемого каталога [awesome-opencode](https://github.com/awesome-opencode/awesome-opencode).
 - Лицензия: MIT, см. [`LICENSE`](LICENSE)
