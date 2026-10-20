@@ -13,7 +13,7 @@
 |---|---|
 | Статус | Активно поддерживаемый персональный OpenCode tool/plugin |
 | Тип | OpenCode TUI plugin / host extension |
-| Host app | OpenCode v2; release baseline — `2.0.32` |
+| Host app | OpenCode `1.19.3` с v2 plugin API |
 | Package | `opencode-agents-sidebar` `2.0.0` |
 | Runtime | Bun `>=1.3.0` |
 | Проверки maintainer | `bun install --frozen-lockfile && bun run typecheck && bun test && bun run build:all && bun run verify:package` |
@@ -43,7 +43,7 @@ Plugin отображает agent categories и details внутри sidebar т�
 ## Быстрый старт
 
 ```sh
-opencode plugin add opencode-agents-sidebar@2.0.0
+opencode plugin opencode-agents-sidebar@2.0.0 --global --force
 ```
 
 ## Установка
@@ -53,7 +53,7 @@ opencode plugin add opencode-agents-sidebar@2.0.0
 Установите release через v2 plugin manager:
 
 ```sh
-opencode plugin add opencode-agents-sidebar@2.0.0
+opencode plugin opencode-agents-sidebar@2.0.0 --global --force
 ```
 
 Эквивалентная явная конфигурация:
@@ -90,7 +90,7 @@ Build создаёт отдельные v2 server и TUI definitions в `dist/`;
 
 | Компонент | Поддерживаемая версия | Источник |
 |---|---|---|
-| Host app | OpenCode v2 (`2.0.32` — release baseline) | Release smoke contract |
+| Host app | OpenCode `1.19.3` (release baseline v2 plugin API) | Release smoke contract |
 | Plugin API | `@opencode/plugin 2.0.32` | dependency в `package.json` |
 | Theme API | `@opencode/theme 2.0.32` | peer dependency в `package.json` |
 | TUI runtime | `@opentui/core >=0.5.17`, `@opentui/solid >=0.5.17`, `solid-js 1.9.12` | peer dependencies в `package.json` |
