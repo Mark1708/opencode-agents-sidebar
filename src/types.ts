@@ -11,7 +11,6 @@ export interface SidebarConfig {
   sidebar_width: number;
   name_width: number;
   poll_interval_ms: number;
-  slot_order: number;
   title: string;
   category_order: string[];
   model_display: ModelDisplay;
@@ -31,6 +30,7 @@ export interface TextTheme {
   borderActive: unknown;
   text: unknown;
   textMuted: unknown;
+  error?: unknown;
 }
 
 export type ConfigState =

@@ -2,7 +2,7 @@
 
 [Русская версия](./README.ru.md)
 
-> Universal OpenCode TUI sidebar plugin for browsing agents and subagents. OhMyOpenAgent metadata is treated as an optional bootstrap/enrichment source, not the core product model.
+> OpenCode v2 TUI sidebar for browsing agents and subagents from the current OhMyOpenAgent configuration source.
 
 [![Package](https://img.shields.io/badge/npm-opencode--agents--sidebar-111827?style=for-the-badge&labelColor=111827&color=5b5ef4)](https://www.npmjs.com/package/opencode-agents-sidebar)
 ![Runtime](https://img.shields.io/badge/runtime-Bun-111827?style=for-the-badge&logo=bun&logoColor=5b5ef4)
@@ -13,10 +13,10 @@
 |---|---|
 | Status | Actively maintained personal OpenCode tool/plugin |
 | Type | OpenCode TUI plugin / host extension |
-| Host app | OpenCode `>= v1.14.49` documented; `@opencode-ai/plugin >=1.4.0` peer dependency |
-| Package | `opencode-agents-sidebar` `1.0.8`, published on npm |
-| Runtime | Bun `>=1.1.0` |
-| Maintainer checks | `bun install && bun run build:all && bun test && bun run typecheck` |
+| Host app | OpenCode v2; `2.0.32` is the release baseline |
+| Package | `opencode-agents-sidebar` `2.0.0` |
+| Runtime | Bun `>=1.3.0` |
+| Maintainer checks | `bun install --frozen-lockfile && bun run typecheck && bun test && bun run build:all && bun run verify:package` |
 
 ## Screenshots
 
@@ -31,80 +31,84 @@ The plugin renders agent categories and details inside the OpenCode terminal UI 
 ## Summary
 
 - Displays OpenCode agents in the OpenCode sidebar.
-- Uses a normalized provider boundary so OpenCode-native, custom, and optional OhMyOpenAgent sources can feed the same UI.
+- Reads agents from `oh-my-openagent.json` through a normalized provider boundary; the seam permits a future native OpenCode source without claiming universal discovery today.
 - Groups agents into neutral categories such as primary, subagents, built-in, project, global, custom, disabled, hidden, and other.
 - Supports collapsible category sections and a collapsible main sidebar panel.
 - Shows provider, model, variant, fallback, and disabled-agent information according to display settings.
 - Supports compact and split row layouts for different terminal widths.
 - Supports provider, model, and variant aliases for shorter terminal output.
-- Reloads provider data by polling and fingerprint comparison.
+- Reloads configuration through directory watches with polling recovery and deterministic fingerprint comparison.
 - Handles missing or invalid configuration files with explicit sidebar states.
 
 ## Quick start
 
 ```sh
-# install the published OpenCode plugin globally
-opencode plugin opencode-agents-sidebar@latest --global --force
-
-# optional: build from a local checkout for development
-git clone https://github.com/Mark1708/opencode-agents-sidebar.git
-cd opencode-agents-sidebar
-bun install
-bun run build:all
+opencode plugin add opencode-agents-sidebar@2.0.0
 ```
-
-This release is a provider-boundary foundation: the UI is OpenCode-first, while native OpenCode agent discovery is planned for the next implementation phase.
 
 ## Installation
 
-### OpenCode plugin install
+### OpenCode v2
+
+Install the release with the v2 plugin manager:
 
 ```sh
-opencode plugin opencode-agents-sidebar@latest --global --force
+opencode plugin add opencode-agents-sidebar@2.0.0
 ```
 
-This is the recommended path for users because the plugin is published on npm and OpenCode can install it directly.
+The equivalent explicit configuration is:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/v2/cli.json",
+  "plugins": ["opencode-agents-sidebar@2.0.0"]
+}
+```
+
+Add the package once, either to `~/.config/opencode/cli.json` or to the v2
+`plugins` field in `opencode.json(c)`. Package order controls v2 sidebar
+contribution order.
+
+This major does not support OpenCode v1. V1 users must pin
+`opencode-agents-sidebar@1.0.8`; there is no dual-runtime compatibility shim.
 
 ### Local checkout for development
 
 ```sh
 git clone https://github.com/Mark1708/opencode-agents-sidebar.git
 cd opencode-agents-sidebar
-bun install
+bun install --frozen-lockfile
 bun run build:all
+bun run verify:package
 ```
 
-The build emits the plugin entry and TUI bundle into `dist/`.
-
-For local OpenCode testing, install the checkout directly:
-
-```sh
-opencode plugin "file:/absolute/path/to/opencode-agents-sidebar" --global --force
-```
+The build emits separate v2 server and TUI definitions into `dist/`; the
+package verifier writes `.artifacts/package.tgz`. Repository root shims are
+intentionally absent.
 
 ## Compatibility
 
 | Component | Supported version | Source |
 |---|---|---|
-| Host app | OpenCode `>= v1.14.49` | README compatibility note |
-| Plugin API | `@opencode-ai/plugin >=1.4.0` | `package.json` peer dependency |
-| TUI runtime | `@opentui/solid >=0.1.0`, `solid-js >=1.8.0` | `package.json` peer dependencies |
-| Local runtime | Bun `>=1.1.0` | `package.json` engines and Bun-based scripts |
+| Host app | OpenCode v2 (`2.0.32` release baseline) | Release smoke contract |
+| Plugin API | `@opencode/plugin 2.0.32` | `package.json` dependency |
+| Theme API | `@opencode/theme 2.0.32` | `package.json` peer dependency |
+| TUI runtime | `@opentui/core >=0.5.17`, `@opentui/solid >=0.5.17`, `solid-js 1.9.12` | `package.json` peer dependencies |
+| Local runtime | Bun `>=1.3.0` | `package.json` engine |
 | TypeScript | `^5.5.0` | `package.json` dev dependency |
 
 ## Configuration
 
-The sidebar is being redesigned around normalized agent providers. In this foundation release, the temporary bootstrap provider still reads:
+The current release reads one source:
 
 ```text
 ~/.config/opencode/oh-my-openagent.json
 ```
 
-That file is no longer the core product model. It is only an optional/bootstrap source until native OpenCode agent discovery is implemented.
-
-Top-level sections such as `agents`, `agent_order`, `disabled_agents`, `team_mode`, and `tmux` are shared OhMyOpenAgent data. The sidebar renders that data when present, but those sections are not separate sidebar plugin configuration.
-
-The provider seam is already in place: `src/providers/omo.ts` adapts the temporary bootstrap data, and `src/providers/custom.ts` is the minimal placeholder for explicit custom agents.
+Top-level `agents`, `agent_order`, `disabled_agents`, `team_mode`, and `tmux`
+sections are OhMyOpenAgent data. `src/providers/omo.ts` normalizes that data for
+the sidebar. The provider seam permits a future native OpenCode source, but
+native or universal agent discovery is not part of this release.
 
 Smallest useful configuration:
 
@@ -126,7 +130,6 @@ Full documented shape:
     "sidebar_width": 34,
     "name_width": 18,
     "poll_interval_ms": 2000,
-    "slot_order": 850,
     "title": "Agents",
     "category_order": ["Primary", "Subagents", "Built-in", "Project", "Global", "Custom", "Disabled", "Hidden", "Other"],
     "model_display": "details-only",
@@ -172,6 +175,9 @@ Supported values:
 - `show_disabled`: `"hidden"`, `"dimmed"`, or `"grouped"`.
 - `agent_row_mode`: `"compact"` or `"split"`.
 - `symbols`: `"unicode"` or `"ascii"`.
+
+OpenCode v2 sidebar contribution order follows package order in the host
+`plugins` list.
 
 ## Usage
 
@@ -232,14 +238,16 @@ team 2/4
 ├── dist/                      # Built package output
 ├── src/
 │   ├── agents/                # Normalized agent types, grouping, merge logic
-│   ├── providers/             # AgentProvider boundary and source implementations
+│   ├── providers/             # AgentProvider boundary and OhMyOpenAgent source
 │   ├── agents.ts              # Agent list/view-state helpers
 │   ├── config.ts              # Raw JSON reading and sidebar config merge helpers
+│   ├── config-watcher.ts      # Directory watches with polling recovery
+│   ├── runtime.ts             # Runtime states, fingerprints, serialized reloads
 │   ├── defaults.ts            # Neutral sidebar defaults
 │   ├── format.ts              # Text formatting and display utilities
-│   ├── index.ts               # OpenCode plugin entry
-│   ├── render.ts              # TUI plugin render entry
-│   ├── tui.ts                 # TUI component implementation
+│   ├── index.ts               # OpenCode v2 server definition
+│   ├── render.ts              # Sole OpenTUI/Solid render boundary
+│   ├── tui.ts                 # OpenCode v2 lifecycle and state ownership
 │   └── types.ts               # TypeScript type definitions
 ├── package.json               # Package metadata, scripts, peer dependencies
 ├── tsconfig.json              # TypeScript configuration
@@ -248,18 +256,18 @@ team 2/4
 
 ## Troubleshooting
 
-- If the published plugin does not load, run `opencode plugin opencode-agents-sidebar@latest --global --force` again and restart OpenCode.
-- If a local checkout does not load, rebuild with `bun run build:all`, then reinstall with `opencode plugin "file:/absolute/path/to/opencode-agents-sidebar" --global --force`.
-- If agents do not appear in this foundation release, verify the temporary bootstrap provider has agent metadata available.
-- If provider data is invalid, the sidebar shows neutral provider diagnostics.
+- If the package does not load, run `opencode plugin check` and verify that `opencode-agents-sidebar@2.0.0` appears once in the v2 `plugins` list.
+- If a local build does not load, run `bun run build:all && bun run verify:package` and test `.artifacts/package.tgz` through a disposable v2 wrapper.
+- If agents do not appear, verify `~/.config/opencode/oh-my-openagent.json` contains valid agent metadata.
+- Missing and malformed configuration produce explicit sidebar states and recover after create, replace, or edit.
 - If content is cut off, adjust `sidebar_width`, `name_width`, or `agent_row_mode`.
 - If model names are too long, use `model_aliases`, `provider_aliases`, or `variant_aliases`.
-- If config changes do not appear immediately, wait for the polling interval or restart OpenCode.
+- If config changes do not appear, verify the configured path is readable; native directory watching falls back to polling after watch errors.
 
 ## Limitations / Security
 
-- The foundation release reads local provider metadata, not provider credentials. The current built-in data source is the temporary OhMyOpenAgent bootstrap provider, plus a minimal custom-provider seam.
-- Config reload uses provider file watchers with polling fallback and fingerprint comparison.
+- The plugin reads local OhMyOpenAgent metadata, not provider credentials. Native OpenCode agent discovery is a future provider implementation.
+- Config reload uses directory watchers with polling recovery, deterministic fingerprints, and generation-gated serialized reads.
 - Sidebar width behavior is constrained by terminal and OpenCode TUI rendering.
 - Styling depends on the host OpenCode and OpenTUI theme capabilities.
 - Example configuration values are placeholders and can be adjusted per local setup.

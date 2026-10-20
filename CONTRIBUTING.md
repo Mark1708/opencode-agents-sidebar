@@ -4,7 +4,7 @@ Thank you for your interest in contributing. This document covers the developmen
 
 ## Prerequisites
 
-- **Bun** (latest stable) -- <https://bun.sh>
+- **Bun** >= 1.3.0 -- <https://bun.sh>
 - **TypeScript** >= 5.5 (installed via `bun install`)
 
 ## Development Setup
@@ -12,10 +12,11 @@ Thank you for your interest in contributing. This document covers the developmen
 ```bash
 git clone https://github.com/Mark1708/opencode-agents-sidebar.git
 cd agents-sidebar
-bun install
-bun run build:all
-bun test
+bun install --frozen-lockfile
 bun run typecheck
+bun test
+bun run build:all
+bun run verify:package
 ```
 
 ## Build Commands
@@ -43,10 +44,18 @@ bun run typecheck
 ## Pull Request Process
 
 1. Fork the repository and create a branch from `main`.
-2. Run `bun run build:all && bun run typecheck && bun test` before pushing.
+2. Run `bun install --frozen-lockfile && bun run typecheck && bun test && bun run build:all && bun run verify:package`.
 3. Write clear, descriptive commit messages (lowercase, imperative mood).
 4. Open a pull request against `main` with a description of the change.
-5. All CI checks must pass before merge.
+5. Required GitHub Actions `Typecheck`, `Tests`, and `Package` checks must pass before merge.
+
+## Release process
+
+GitHub is the source of truth. Maintainers release by pushing a `vX.Y.Z` tag
+that matches `package.json.version`. The release workflow repeats every gate,
+publishes the exact verified `.artifacts/package.tgz` through npm Trusted
+Publishing/OIDC, and attaches the tarball plus its SHA-256 digest to the GitHub
+Release. GitLab is maintained only as a read-only mirror.
 
 ## Language
 
@@ -54,4 +63,4 @@ Use English for all code comments, commit messages, issue descriptions, and pull
 
 ## Project Context
 
-This is an OpenCode TUI sidebar plugin built with `@opentui/solid` and `@opencode-ai/plugin`. It displays normalized provider agents, collapsible sections, and model information. In the Phase 0/1 foundation, [OhMyOpenAgent](https://github.com/oh-my-openagent) metadata remains only a temporary bootstrap source until the OpenCode-native provider is added.
+This is an OpenCode v2 TUI sidebar plugin built with `@opentui/solid` and `@opencode/plugin`. Its current data source is `oh-my-openagent.json`; the provider seam permits a future native OpenCode source but does not claim universal discovery.

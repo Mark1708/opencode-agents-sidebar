@@ -8,7 +8,6 @@ export const DEFAULTS: SidebarConfig & { default_collapsed: string[] } = {
   sidebar_width: 34,
   name_width: 18,
   poll_interval_ms: 2000,
-  slot_order: 850,
   title: "Agents",
   category_order: ["Primary", "Subagents", "Built-in", "Project", "Global", "Custom", "Disabled", "Hidden", "Other"],
   default_collapsed: DEFAULT_COLLAPSED_CATEGORIES,

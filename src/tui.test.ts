@@ -3,7 +3,7 @@ import { unlink } from "node:fs/promises";
 import { buildAgentList, buildSidebarViewState, filterAgents, formatModelName, groupByCategory } from "./agents.js";
 import { mergeAgentSources } from "./agents/merge.js";
 import { resolveGenericCategory } from "./agents/categories.js";
-import { configFingerprint, mergeConfig, readConfigAsync } from "./config.js";
+import { mergeConfig, readConfigAsync } from "./config.js";
 import { DEFAULTS } from "./defaults.js";
 import {
   agentFallbackCount,
@@ -82,11 +82,6 @@ describe("agents sidebar provider foundation", () => {
     expect(DEFAULTS.title).toBe("Agents");
   });
 
-  test("render core layer does not import OmoConfig or use old OmO missing copy", async () => {
-    const renderSource = await Bun.file("src/render.ts").text();
-    expect(renderSource).not.toContain("OmoConfig");
-    expect(renderSource).not.toContain("OmO not configured");
-  });
 
   test("OmO bootstrap provider normalizes agents into AgentEntry", () => {
     const state = normalizeOmoConfig(SAMPLE_OMO_CONFIG, "/tmp/omo.json");
@@ -201,9 +196,8 @@ describe("agents sidebar pure functions", () => {
     });
   });
 
-  test("configFingerprint includes missing and invalid states", () => {
-    expect(configFingerprint({ kind: "missing", path: "/tmp/missing.json" })).toBe("missing:/tmp/missing.json");
-    expect(configFingerprint({ kind: "invalid", path: "/tmp/bad.json", error: "bad json" })).toBe("invalid:/tmp/bad.json:bad json");
+  test("mergeConfig ignores the removed slot_order field", () => {
+    expect(Object.hasOwn(mergeConfig({ slot_order: 850 }), "slot_order")).toBe(false);
   });
 
   test("mergeConfig user aliases extend defaults", () => {

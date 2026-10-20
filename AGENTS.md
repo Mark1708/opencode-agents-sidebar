@@ -1,54 +1,65 @@
 # AGENTS SIDEBAR PLUGIN
 
-**Version:** 1.0.7 | **npm:** `opencode-agents-sidebar` | **Plugin ID:** `agents-sidebar:tui`
+**Version:** 2.0.0 | **npm:** `opencode-agents-sidebar` | **Plugin IDs:** `agents-sidebar`, `agents-sidebar.tui`
 
 ## OVERVIEW
 
-Displays OhMyOpenAgent agent lifecycle categories, collapsible sections, model info, and team status in sidebar. Reads agent config from `oh-my-openagent.json`.
+OpenCode V2-only sidebar for OhMyOpenAgent lifecycle categories, collapsible groups, selection, model details, and config diagnostics. Current discovery reads only `oh-my-openagent.json`; the provider seam permits a future native OpenCode source but does not imply universal discovery.
 
 ## STRUCTURE
 
+```text
+src/
+├── index.ts          # V2 server entry (`@opencode/plugin`)
+├── tui.ts            # V2 setup, signals, reload ownership, teardown
+├── render.ts         # sole OpenTUI/Solid boundary and tracked mount
+├── runtime.ts        # runtime state and serialized reload controller
+├── config-watcher.ts # directory watches with polling recovery
+├── providers/        # agent provider seam and OMO source
+├── agents.ts         # categorization and group construction
+├── config.ts         # sidebar config parsing
+├── defaults.ts       # immutable defaults
+├── format.ts         # single-line render formatting
+└── types.ts          # domain and render types
+scripts/verify-package.mjs
+.github/workflows/
+├── ci.yml             # Required PR/push checks and package artifact
+└── release.yml        # Tag validation, npm OIDC publish, GitHub Release
 ```
-agents-sidebar/
-├── src/
-│   ├── index.ts    # Plugin API stub (definePlugin)
-│   ├── tui.ts      # Re-exports from all modules + render.ts default
-│   ├── render.ts   # TUI entry -- element/render/poll loop (uses @opentui/solid)
-│   ├── agents.ts   # Agent discovery, category mapping, group building
-│   ├── config.ts   # Reads ~/.config/opencode/oh-my-openagent.json
-│   ├── defaults.ts # DEFAULTS object with all config fallbacks
-│   ├── format.ts   # Agent name/model/category formatting
-│   └── types.ts    # Core types: AgentEntry, CategoryGroup, OmoConfig, SidebarConfig
-├── assets/         # Screenshots for README
-├── .gitlab-ci.yml  # CI: validate -> build -> publish
-└── package.json
+
+## CONTRACTS
+
+- Server dependency: `@opencode/plugin@2.0.32`.
+- Host/TUI peers: `@opencode/theme`, `@opentui/core`, `@opentui/solid`, and `solid-js`.
+- Package exports are `.` and `./tui`; local-directory host smoke uses disposable root wrappers, never repository root shims.
+- `@opentui/solid` is imported only in `src/render.ts`.
+- A slot callback creates one stable container; `insert(container, () => ...)` owns reactive rendering.
+- Runtime state is `loaded | missing | invalid | error`, with deterministic fingerprint and watch specification.
+- Reload work is serialized/coalesced and generation-gated. Cleanup invalidates pending work before closing the slot, controller, and watcher.
+- User collapse and selection state survives reload after first valid initialization.
+- All display output is single-line and truncate-safe.
+
+## COMMANDS
+
+```bash
+bun run typecheck
+bun test
+bun run build:all
+bun run verify:package
 ```
 
-## WHERE TO LOOK
+## AUTOMATION
 
-| Task | File |
-|------|------|
-| Add agent fields | `src/types.ts` (`AgentEntry`) + `src/agents.ts` (mapping logic) |
-| Change category logic | `src/agents.ts` -- `categorizeAgents()`, `DEFAULT_CATEGORY` |
-| Display formatting | `src/format.ts` -- agent row rendering, name truncation |
-| Config options | `src/types.ts` (`SidebarConfig`) + `src/defaults.ts` (`DEFAULTS`) |
-| Config parsing | `src/config.ts` -- `mergeConfig()`, type-safe value extractors |
-| TUI rendering | `src/render.ts` -- sidebar layout, sections, keybind handling |
-
-## CONVENTIONS (THIS REPO)
-
-- **Config source**: Single file `~/.config/opencode/oh-my-openagent.json` with `tui` sub-key for sidebar config
-- **Type-safe parsing**: `isRecord()`, `stringValue()`, `numberValue()`, `booleanValue()`, `enumValue()` -- no `as` casts
-- **Agent categories**: Defined in `defaults.ts` (`DEFAULT_CATEGORY_ORDER`), users override via `tui.category_order`
-- **Alias maps**: `provider_aliases`, `model_aliases`, `variant_aliases` for display name overrides
-- **Model display modes**: `"inline"` (default), `"details-only"`, `"hidden"`
-- **Show disabled modes**: `"hidden"`, `"dimmed"`, `"grouped"`
-- **Config fingerprint**: `configFingerprint()` for change detection in poll loop
+- GitHub is the source of truth. `CI / Typecheck`, `CI / Tests`, and `CI / Package` are required before merge.
+- CI uploads the exact `.artifacts/package.tgz` produced by `verify:package`.
+- A `vX.Y.Z` tag must equal `package.json.version`; the release workflow repeats every gate, publishes the verified tarball through npm Trusted Publishing/OIDC, and attaches it with its SHA-256 digest to the GitHub Release.
+- GitLab is a read-only mirror and has no release pipeline.
 
 ## ANTI-PATTERNS
 
-- NEVER add runtime dependencies beyond peer deps (`@opencode-ai/plugin`, `@opentui/solid`, `solid-js`)
-- NEVER import `@opentui/solid` outside `render.ts`
-- NEVER mutate `DEFAULTS` object -- always spread into new objects
-- NEVER use `text()` for interactive elements -- use `box()` with `onMouseDown`
-- All format output MUST be single-line, truncate-safe
+- NEVER add `@opencode-ai/plugin`, `@opencode-ai/sdk`, V1 plugin lifecycle, dual runtime shapes, or root entry shims.
+- NEVER import `@opentui/solid` outside `src/render.ts`.
+- NEVER mutate defaults or accepted runtime state; create new values.
+- NEVER publish an unchanged fingerprint or let an older reload generation commit.
+- NEVER use `text()` for interactive elements; use `box()` with `onMouseDown`.
+- NEVER restore removed `slot_order`; V2 contribution order follows package order in host config.
