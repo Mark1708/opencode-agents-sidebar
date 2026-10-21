@@ -43,7 +43,7 @@ Plugin отображает agent categories и details внутри sidebar т�
 ## Быстрый старт
 
 ```sh
-opencode plugin add opencode-agents-sidebar@3.0.0 --global --force
+opencode plugin add opencode-agents-sidebar@3.0.0
 ```
 
 ## Установка
@@ -53,7 +53,7 @@ opencode plugin add opencode-agents-sidebar@3.0.0 --global --force
 Установите release через v2 plugin manager:
 
 ```sh
-opencode plugin add opencode-agents-sidebar@3.0.0 --global --force
+opencode plugin add opencode-agents-sidebar@3.0.0
 ```
 
 Эквивалентная явная конфигурация:
