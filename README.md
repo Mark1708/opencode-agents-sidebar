@@ -56,18 +56,19 @@ Install the release with the v2 plugin manager:
 opencode plugin add opencode-agents-sidebar@3.1.0
 ```
 
-The equivalent explicit configuration is:
+The equivalent manual configuration is:
 
 ```jsonc
 {
-  "$schema": "https://opencode.ai/v2/cli.json",
+  "$schema": "https://opencode.ai/config.json",
   "plugins": ["opencode-agents-sidebar@3.1.0"]
 }
 ```
 
-Add the package once, either to `~/.config/opencode/cli.json` or to the v2
-`plugins` field in `opencode.json(c)`. Package order controls v2 sidebar
-contribution order.
+The command installs the package and adds its npm spec to `plugins` in the
+global `~/.config/opencode/opencode.json`. For project-scoped installation, add
+the same entry to `opencode.json(c)` in the project root. Package order controls
+v2 sidebar contribution order.
 
 This major does not support OpenCode v1. V1 users must pin
 `opencode-agents-sidebar@1.0.8`; there is no dual-runtime compatibility shim.

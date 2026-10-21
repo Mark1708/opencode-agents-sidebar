@@ -56,18 +56,19 @@ opencode plugin add opencode-agents-sidebar@3.1.0
 opencode plugin add opencode-agents-sidebar@3.1.0
 ```
 
-Эквивалентная явная конфигурация:
+Эквивалентная ручная конфигурация:
 
 ```jsonc
 {
-  "$schema": "https://opencode.ai/v2/cli.json",
+  "$schema": "https://opencode.ai/config.json",
   "plugins": ["opencode-agents-sidebar@3.1.0"]
 }
 ```
 
-Добавьте package один раз: в `~/.config/opencode/cli.json` либо в v2-поле
-`plugins` файла `opencode.json(c)`. Порядок packages определяет порядок v2
-sidebar contributions.
+Команда устанавливает package и добавляет его npm spec в `plugins` глобального
+файла `~/.config/opencode/opencode.json`. Для установки только в проекте
+добавьте ту же запись в `opencode.json(c)` в корне проекта. Порядок packages
+определяет порядок v2 sidebar contributions.
 
 Этот major не поддерживает OpenCode v1. Пользователям v1 нужно закрепить
 `opencode-agents-sidebar@1.0.8`; dual-runtime compatibility shim отсутствует.
