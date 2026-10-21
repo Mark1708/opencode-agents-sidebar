@@ -13,7 +13,7 @@
 |---|---|
 | Status | Actively maintained personal OpenCode tool/plugin |
 | Type | OpenCode TUI plugin / host extension |
-| Host app | OpenCode `1.19.3` with the v2 plugin API |
+| Host app | OpenCode `>=2.0.32`; release smoke also covers current `2.1.2` |
 | Package | `opencode-agents-sidebar` `2.0.0` |
 | Runtime | Bun `>=1.3.0` |
 | Maintainer checks | `bun install --frozen-lockfile && bun run typecheck && bun test && bun run build:all && bun run verify:package` |
@@ -43,7 +43,7 @@ The plugin renders agent categories and details inside the OpenCode terminal UI 
 ## Quick start
 
 ```sh
-opencode plugin opencode-agents-sidebar@2.0.0 --global --force
+opencode plugin add opencode-agents-sidebar@2.0.0 --global --force
 ```
 
 ## Installation
@@ -53,7 +53,7 @@ opencode plugin opencode-agents-sidebar@2.0.0 --global --force
 Install the release with the v2 plugin manager:
 
 ```sh
-opencode plugin opencode-agents-sidebar@2.0.0 --global --force
+opencode plugin add opencode-agents-sidebar@2.0.0 --global --force
 ```
 
 The equivalent explicit configuration is:
@@ -90,7 +90,7 @@ intentionally absent.
 
 | Component | Supported version | Source |
 |---|---|---|
-| Host app | OpenCode `1.19.3` (v2 plugin API release baseline) | Release smoke contract |
+| Host app | OpenCode `>=2.0.32` (smoked on `2.0.32` and `2.1.2`) | Release smoke contract |
 | Plugin API | `@opencode/plugin 2.0.32` | `package.json` dependency |
 | Theme API | `@opencode/theme 2.0.32` | `package.json` peer dependency |
 | TUI runtime | `@opentui/core >=0.5.17`, `@opentui/solid >=0.5.17`, `solid-js 1.9.12` | `package.json` peer dependencies |
