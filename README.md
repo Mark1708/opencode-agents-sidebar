@@ -43,7 +43,7 @@ The plugin renders agent categories and details inside the OpenCode terminal UI 
 ## Quick start
 
 ```sh
-opencode plugin add opencode-agents-sidebar@3.0.0 --global --force
+opencode plugin add opencode-agents-sidebar@3.0.0
 ```
 
 ## Installation
@@ -53,7 +53,7 @@ opencode plugin add opencode-agents-sidebar@3.0.0 --global --force
 Install the release with the v2 plugin manager:
 
 ```sh
-opencode plugin add opencode-agents-sidebar@3.0.0 --global --force
+opencode plugin add opencode-agents-sidebar@3.0.0
 ```
 
 The equivalent explicit configuration is:
