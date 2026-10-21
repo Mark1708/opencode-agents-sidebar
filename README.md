@@ -14,7 +14,7 @@
 | Status | Actively maintained personal OpenCode tool/plugin |
 | Type | OpenCode TUI plugin / host extension |
 | Host app | OpenCode `>=2.0.32`; release smoke also covers current `2.1.2` |
-| Package | `opencode-agents-sidebar` `2.0.0` |
+| Package | `opencode-agents-sidebar` `3.0.0` |
 | Runtime | Bun `>=1.3.0` |
 | Maintainer checks | `bun install --frozen-lockfile && bun run typecheck && bun test && bun run build:all && bun run verify:package` |
 
@@ -43,7 +43,7 @@ The plugin renders agent categories and details inside the OpenCode terminal UI 
 ## Quick start
 
 ```sh
-opencode plugin add opencode-agents-sidebar@2.0.0 --global --force
+opencode plugin add opencode-agents-sidebar@3.0.0 --global --force
 ```
 
 ## Installation
@@ -53,7 +53,7 @@ opencode plugin add opencode-agents-sidebar@2.0.0 --global --force
 Install the release with the v2 plugin manager:
 
 ```sh
-opencode plugin add opencode-agents-sidebar@2.0.0 --global --force
+opencode plugin add opencode-agents-sidebar@3.0.0 --global --force
 ```
 
 The equivalent explicit configuration is:
@@ -61,7 +61,7 @@ The equivalent explicit configuration is:
 ```jsonc
 {
   "$schema": "https://opencode.ai/v2/cli.json",
-  "plugins": ["opencode-agents-sidebar@2.0.0"]
+  "plugins": ["opencode-agents-sidebar@3.0.0"]
 }
 ```
 
@@ -256,7 +256,7 @@ team 2/4
 
 ## Troubleshooting
 
-- If the package does not load, run `opencode plugin check` and verify that `opencode-agents-sidebar@2.0.0` appears once in the v2 `plugins` list.
+- If the package does not load, run `opencode plugin check` and verify that `opencode-agents-sidebar@3.0.0` appears once in the v2 `plugins` list.
 - If a local build does not load, run `bun run build:all && bun run verify:package` and test `.artifacts/package.tgz` through a disposable v2 wrapper.
 - If agents do not appear, verify `~/.config/opencode/oh-my-openagent.json` contains valid agent metadata.
 - Missing and malformed configuration produce explicit sidebar states and recover after create, replace, or edit.
