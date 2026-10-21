@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Corrected OpenCode v2 plugin configuration paths and schema references in the English and Russian installation guides.
+
 ## [3.1.0] - 2026-10-21
 
 ### Changed
