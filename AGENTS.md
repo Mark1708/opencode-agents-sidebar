@@ -1,6 +1,6 @@
 # AGENTS SIDEBAR PLUGIN
 
-**Version:** 3.0.0 | **npm:** `opencode-agents-sidebar` | **Plugin IDs:** `agents-sidebar`, `agents-sidebar.tui`
+**Version:** 3.1.0 | **npm:** `opencode-agents-sidebar` | **Plugin IDs:** `agents-sidebar`, `agents-sidebar.tui`
 
 ## OVERVIEW
 
