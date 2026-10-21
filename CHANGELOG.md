@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Corrected OpenCode v2 plugin configuration paths and schema references in the English and Russian installation guides.
+- Corrected OpenCode v2 installation and configuration examples, documented every consumed `tui` field, and removed screenshots that no longer represented v3 defaults or output.
 
 ## [3.1.0] - 2026-10-21
 

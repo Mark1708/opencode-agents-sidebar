@@ -18,21 +18,11 @@
 | Runtime | Bun `>=1.3.0` |
 | Maintainer checks | `bun install --frozen-lockfile && bun run typecheck && bun test && bun run build:all && bun run verify:package` |
 
-## Screenshots
-
-The plugin renders agent categories and details inside the OpenCode terminal UI sidebar.
-
-![All categories collapsed](assets/categories-collapsed.png)
-
-![Categories expanded](assets/categories-expanded.png)
-
-![Agent details](assets/agent-details.png)
 
 ## Summary
 
-- Displays OpenCode agents in the OpenCode sidebar.
 - Reads agents from `oh-my-openagent.json` through a normalized provider boundary; the seam permits a future native OpenCode source without claiming universal discovery today.
-- Groups agents into neutral categories such as primary, subagents, built-in, project, global, custom, disabled, hidden, and other.
+- Groups agents by source-owned categories. The generic order is neutral, while the current OhMyOpenAgent provider retains its legacy lifecycle mapping.
 - Supports collapsible category sections and a collapsible main sidebar panel.
 - Shows provider, model, variant, fallback, and disabled-agent information according to display settings.
 - Supports compact and split row layouts for different terminal widths.
@@ -111,7 +101,8 @@ sections are OhMyOpenAgent data. `src/providers/omo.ts` normalizes that data for
 the sidebar. The provider seam permits a future native OpenCode source, but
 native or universal agent discovery is not part of this release.
 
-Smallest useful configuration:
+Plugin settings belong in the existing OhMyOpenAgent file; do not replace its
+top-level agent data. A minimal plugin-specific override is:
 
 ```json
 {
@@ -123,7 +114,7 @@ Smallest useful configuration:
 }
 ```
 
-Full documented shape:
+Complete `tui` shape consumed by this plugin:
 
 ```json
 {
@@ -132,11 +123,18 @@ Full documented shape:
     "name_width": 18,
     "poll_interval_ms": 2000,
     "title": "Agents",
+    "agent_categories": {
+      "local-helper": "Custom"
+    },
     "category_order": ["Primary", "Subagents", "Built-in", "Project", "Global", "Custom", "Disabled", "Hidden", "Other"],
+    "default_collapsed": [],
     "model_display": "details-only",
     "show_provider": true,
     "show_variant_in_details": false,
     "show_disabled": "dimmed",
+    "show_team_status": true,
+    "show_tmux_status": true,
+    "default_agents_collapsed": false,
     "agent_row_mode": "compact",
     "symbols": "unicode",
     "provider_aliases": {
@@ -176,6 +174,12 @@ Supported values:
 - `show_disabled`: `"hidden"`, `"dimmed"`, or `"grouped"`.
 - `agent_row_mode`: `"compact"` or `"split"`.
 - `symbols`: `"unicode"` or `"ascii"`.
+- `agent_categories`: maps an agent name to a category; an explicit category on
+  the agent still takes precedence.
+- `default_collapsed`: category names collapsed on first render.
+- `default_agents_collapsed`: collapses the entire agent section on first render.
+- `show_team_status` and `show_tmux_status`: control the optional OhMyOpenAgent
+  status rows.
 
 OpenCode v2 sidebar contribution order follows package order in the host
 `plugins` list.
@@ -235,7 +239,6 @@ team 2/4
 
 ```text
 .
-├── assets/                    # Local screenshots used by this README
 ├── dist/                      # Built package output
 ├── src/
 │   ├── agents/                # Normalized agent types, grouping, merge logic

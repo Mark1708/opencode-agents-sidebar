@@ -18,21 +18,11 @@
 | Runtime | Bun `>=1.3.0` |
 | Проверки maintainer | `bun install --frozen-lockfile && bun run typecheck && bun test && bun run build:all && bun run verify:package` |
 
-## Скриншоты
-
-Plugin отображает agent categories и details внутри sidebar терминального UI OpenCode.
-
-![All categories collapsed](assets/categories-collapsed.png)
-
-![Categories expanded](assets/categories-expanded.png)
-
-![Agent details](assets/agent-details.png)
 
 ## Сводка
 
-- Показывает OpenCode agents в OpenCode sidebar.
 - Читает agents из `oh-my-openagent.json` через normalized provider boundary; seam допускает будущий native OpenCode source, но текущий release не заявляет universal discovery.
-- Группирует agents в нейтральные категории: primary, subagents, built-in, project, global, custom, disabled, hidden и other.
+- Группирует agents по категориям source. Generic order нейтрален, а текущий OhMyOpenAgent provider сохраняет legacy lifecycle mapping.
 - Поддерживает сворачиваемые category sections и сворачиваемый главный sidebar panel.
 - Показывает provider, model, variant, fallback и disabled-agent информацию согласно display settings.
 - Поддерживает compact и split row layouts для разных terminal widths.
@@ -111,7 +101,8 @@ Top-level sections `agents`, `agent_order`, `disabled_agents`, `team_mode` и
 sidebar. Provider seam допускает будущий native OpenCode source, но native или
 universal agent discovery не входят в этот release.
 
-Минимальная полезная конфигурация:
+Настройки plugin нужно добавлять в существующий файл OhMyOpenAgent, не заменяя
+его top-level agent data. Минимальный plugin-specific override:
 
 ```json
 {
@@ -123,7 +114,8 @@ universal agent discovery не входят в этот release.
 }
 ```
 
-При использовании текущего OhMyOpenAgent bootstrap source оставьте legacy category order, если хотите привычную группировку:
+При использовании текущего OhMyOpenAgent bootstrap source оставьте legacy
+category order, если хотите привычную группировку:
 
 ```json
 {
@@ -134,7 +126,7 @@ universal agent discovery не входят в этот release.
 }
 ```
 
-Полная документированная форма:
+Полная форма `tui`, которую использует этот plugin:
 
 ```json
 {
@@ -143,11 +135,18 @@ universal agent discovery не входят в этот release.
     "name_width": 18,
     "poll_interval_ms": 2000,
     "title": "Agents",
+    "agent_categories": {
+      "local-helper": "Custom"
+    },
     "category_order": ["Primary", "Subagents", "Built-in", "Project", "Global", "Custom", "Disabled", "Hidden", "Other"],
+    "default_collapsed": [],
     "model_display": "details-only",
     "show_provider": true,
     "show_variant_in_details": false,
     "show_disabled": "dimmed",
+    "show_team_status": true,
+    "show_tmux_status": true,
+    "default_agents_collapsed": false,
     "agent_row_mode": "compact",
     "symbols": "unicode",
     "provider_aliases": {
@@ -176,6 +175,12 @@ universal agent discovery не входят в этот release.
 - `show_disabled`: `"hidden"`, `"dimmed"` или `"grouped"`.
 - `agent_row_mode`: `"compact"` или `"split"`.
 - `symbols`: `"unicode"` или `"ascii"`.
+- `agent_categories`: сопоставляет имя agent с category; явная category в
+  настройках самого agent имеет приоритет.
+- `default_collapsed`: categories, свёрнутые при первом render.
+- `default_agents_collapsed`: сворачивает весь agent section при первом render.
+- `show_team_status` и `show_tmux_status`: управляют опциональными status rows
+  OhMyOpenAgent.
 
 В OpenCode v2 порядок sidebar contributions определяется порядком packages в
 host-списке `plugins`.
@@ -235,7 +240,6 @@ team 2/4
 
 ```text
 .
-├── assets/                    # Local screenshots для README
 ├── dist/                      # Собранный package output
 ├── src/
 │   ├── agents/                # Normalized agent types, grouping, merge logic
