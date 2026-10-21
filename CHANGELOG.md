@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-21
+
+### Breaking
+
+- Requires OpenCode v2 and the `@opencode/plugin` v2 server/TUI contracts. OpenCode v1 users must remain on `opencode-agents-sidebar@1.0.8`.
+- Removes the V1 lifecycle, repository root entrypoint shim, and deprecated `slot_order`; v2 contribution order follows package order in host configuration.
+
+### Added
+
+- Adds deterministic `loaded`, `missing`, `invalid`, and `error` runtime states with full fingerprints and recovery watch specifications.
+- Adds serialized, coalesced, generation-safe reloads that preserve user collapse and selection state.
+- Adds directory-based config watching with delete/recreate, atomic-replacement, and polling recovery support.
+- Adds strict declaration-closure, packed-artifact, clean-import, and consumer type checks.
+
+### Changed
+
+- Uses a stable tracked Solid render root so runtime, click, selection, and live theme changes render without host snapshot requests.
+- Documents OhMyOpenAgent configuration as the only current agent source; the provider seam permits future native sources without claiming universal discovery.
+- Moves required checks and exact-artifact npm releases from GitLab CI to GitHub Actions with Trusted Publishing/OIDC.
+
 ## [1.0.8] - 2026-05-30
 
 ### Changed

@@ -1,8 +1,6 @@
-import type { Plugin } from "@opencode-ai/plugin";
+import { Plugin } from "@opencode/plugin";
 
-const plugin: { id: string; server: Plugin } = {
+export default Plugin.define({
   id: "agents-sidebar",
-  server: async (_input) => ({}),
-};
-
-export default plugin;
+  setup() {},
+});

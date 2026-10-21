@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { DEFAULTS, DISABLED_CATEGORY } from "../defaults.js";
-import { readConfigAsync } from "../config.js";
+import { isRecord, readConfigAsync } from "../config.js";
 import type { AgentEntry, AgentMode, ModelSource } from "../agents/types.js";
 import type { AgentProvider, AgentProviderContext, AgentSourceState } from "./types.js";
 import type { AgentRowMode, AliasMap, ModelDisplay, ShowDisabledMode, SymbolMode } from "../types.js";
@@ -58,7 +58,6 @@ export interface OmoTuiConfig {
   sidebar_width?: number;
   name_width?: number;
   poll_interval_ms?: number;
-  slot_order?: number;
   title?: string;
   provider_aliases?: AliasMap;
   model_aliases?: AliasMap;
@@ -111,10 +110,12 @@ export const omoProvider: AgentProvider = {
 
 export async function loadOmoSourceState(path = OMO_CONFIG_PATH): Promise<AgentSourceState> {
   const state = await readConfigAsync(path);
-  if (state.kind === "missing") return emptyOmoState(path);
+  if (state.kind === "missing") return emptyOmoState(path, "missing");
   if (state.kind === "invalid") {
+    const empty = emptyOmoState(path, "invalid");
     return {
-      ...emptyOmoState(path),
+      ...empty,
+      metadata: { ...empty.metadata, configError: state.error },
       errors: [{ code: "omo-config-invalid", severity: "error", message: state.error, source: "oh-my-openagent", path }],
     };
   }
@@ -129,6 +130,8 @@ export function normalizeOmoConfig(config: OmoConfig, path = OMO_CONFIG_PATH): A
     source: "oh-my-openagent",
     agents,
     metadata: {
+      configState: "loaded",
+      configPath: path,
       configuredAgentCount: Object.keys(config.agents ?? {}).length,
       team_mode: config.team_mode ?? {},
       tmux: config.tmux ?? {},
@@ -203,11 +206,11 @@ function normalizeMode(mode: string | undefined): AgentMode {
   return "unknown";
 }
 
-function emptyOmoState(path: string): AgentSourceState {
+function emptyOmoState(path: string, configState: "missing" | "invalid"): AgentSourceState {
   return {
     source: "oh-my-openagent",
     agents: [],
-    metadata: {},
+    metadata: { configState, configPath: path },
     warnings: [],
     errors: [],
     watchedPaths: [path],
@@ -293,7 +296,6 @@ function readTui(value: unknown): OmoTuiConfig | undefined {
     sidebar_width: numberValue(value.sidebar_width),
     name_width: numberValue(value.name_width),
     poll_interval_ms: numberValue(value.poll_interval_ms),
-    slot_order: numberValue(value.slot_order),
     title: stringValue(value.title),
     provider_aliases: readStringRecord(value.provider_aliases),
     model_aliases: readStringRecord(value.model_aliases),
@@ -301,9 +303,6 @@ function readTui(value: unknown): OmoTuiConfig | undefined {
   };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function stringValue(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;

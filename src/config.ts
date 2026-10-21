@@ -43,7 +43,6 @@ export function mergeConfig(userConfig: unknown): SidebarConfig {
     sidebar_width: numberValue(config.sidebar_width, DEFAULTS.sidebar_width),
     name_width: numberValue(config.name_width, DEFAULTS.name_width),
     poll_interval_ms: numberValue(config.poll_interval_ms, DEFAULTS.poll_interval_ms),
-    slot_order: numberValue(config.slot_order, DEFAULTS.slot_order),
     title: stringValue(config.title, DEFAULTS.title),
     category_order: stringArrayValue(config.category_order, DEFAULTS.category_order),
     model_display: enumValue(config.model_display, ["inline", "details-only", "hidden"], DEFAULTS.model_display),
@@ -58,20 +57,6 @@ export function mergeConfig(userConfig: unknown): SidebarConfig {
   };
 }
 
-export function configFingerprint(state: ConfigState): string {
-  if (state.kind !== "loaded") {
-    return state.kind === "invalid" ? `${state.kind}:${state.path}:${state.error}` : `${state.kind}:${state.path}`;
-  }
-  const config = state.config;
-  return JSON.stringify({
-    agents: config.agents ?? {},
-    agent_order: config.agent_order ?? [],
-    disabled_agents: config.disabled_agents ?? [],
-    tui: config.tui ?? {},
-    team_mode: config.team_mode ?? {},
-    tmux: config.tmux ?? {},
-  });
-}
 
 export async function readConfigAsync(path: string = CONFIG_PATH): Promise<ConfigState> {
   const file = Bun.file(path);

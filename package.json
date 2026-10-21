@@ -1,8 +1,8 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "opencode-agents-sidebar",
-  "version": "1.0.8",
-  "description": "Universal OpenCode TUI sidebar for browsing provider agents and subagents",
+  "version": "2.0.0",
+  "description": "OpenCode v2 TUI sidebar for browsing OhMyOpenAgent agents and subagents",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -26,42 +26,48 @@
     "subagents",
     "terminal"
   ],
-  "oc-plugin": [
-    "tui"
-  ],
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
     "./tui": {
-      "import": "./dist/tui.js"
+      "import": "./dist/tui.js",
+      "types": "./dist/tui.d.ts"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "clean": "rm -rf dist",
-    "build": "bun build src/render.ts --outfile dist/tui.js --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/sdk --external @opentui/core --external @opentui/solid --external solid-js",
-    "build:index": "bun build src/index.ts --outfile dist/index.js --target bun --format esm --external @opencode-ai/plugin --external @opencode-ai/sdk",
-    "build:types": "bun x tsc --emitDeclarationOnly",
-    "build:all": "bun run clean && bun run build:types && bun run build:index && bun run build",
+    "clean": "rm -rf dist .artifacts",
+    "build:index": "bun build src/index.ts --outfile dist/index.js --target bun --format esm --external @opencode/plugin --external @opencode/plugin/tui --external @opencode/theme --external @opentui/core --external @opentui/solid --external solid-js",
+    "build:tui": "bun build src/tui.ts --outfile dist/tui.js --target bun --format esm --external @opencode/plugin --external @opencode/plugin/tui --external @opencode/theme --external @opentui/core --external @opentui/solid --external solid-js",
+    "build:types": "bun x tsc --project tsconfig.build.json && node scripts/prune-declarations.mjs",
+    "build:all": "bun run clean && bun run build:types && bun run build:index && bun run build:tui",
     "test": "bun test",
     "typecheck": "bun x tsc --noEmit",
-    "dev:install": "cp dist/tui.js tui.js",
+    "verify:package": "node scripts/verify-package.mjs",
     "prepublishOnly": "echo 'Skipping build -- CI already built dist/'"
   },
+  "dependencies": {
+    "@opencode/plugin": "2.0.32"
+  },
   "peerDependencies": {
-    "@opencode-ai/plugin": ">=1.4.0",
-    "@opentui/solid": ">=0.1.0",
-    "solid-js": ">=1.8.0"
+    "@opencode/theme": "2.0.32",
+    "@opentui/core": ">=0.5.17",
+    "@opentui/solid": ">=0.5.17",
+    "solid-js": "1.9.12"
   },
   "devDependencies": {
+    "@opencode/theme": "2.0.32",
+    "@opentui/core": "0.5.17",
+    "@opentui/solid": "0.5.17",
     "@types/bun": "latest",
+    "solid-js": "1.9.12",
     "typescript": "^5.5.0"
   },
   "engines": {
-    "bun": ">=1.1.0"
+    "bun": ">=1.3.0"
   }
 }

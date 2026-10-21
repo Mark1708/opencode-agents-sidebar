@@ -1,20 +1,12 @@
 import { createElement, insert, setProp } from "@opentui/solid";
 import type { JSX } from "@opentui/solid";
-import { watch } from "node:fs";
-import { createSignal } from "solid-js";
-import type { TuiPluginModule } from "@opencode-ai/plugin/tui";
 import { DEFAULTS } from "./defaults.js";
-import { mergeConfig } from "./config.js";
-import { buildSidebarViewState, filterAgents, groupByCategory } from "./agents.js";
+import { sanitizeLine, shortError } from "./config.js";
+import { filterAgents, groupByCategory } from "./agents.js";
 import { agentFallbacks, agentVariant, compactAgentLine, formatDetailLine, formatFullModelRef, formatSplitAgentLines, truncateTo } from "./format.js";
-import { loadAgentSources } from "./providers/index.js";
+import type { SidebarRuntimeState } from "./runtime.js";
 import type { AgentEntry, AgentRowMode, CategoryGroup, Child, DiagnosticWarning, HeaderStats, ModelDisplay, ProviderStatusState, SidebarConfig, SidebarViewState, SymbolMode, TextTheme } from "./types.js";
-import type { AgentSourceState } from "./providers/types.js";
 
-const WATCH_DEBOUNCE_MS = 100;
-
-type Watcher = ReturnType<typeof watch>;
-type Timer = ReturnType<typeof setInterval>;
 
 function element(tag: string, props: Record<string, unknown>, children: Child[] = []): JSX.Element {
   const node = createElement(tag);
@@ -24,7 +16,7 @@ function element(tag: string, props: Record<string, unknown>, children: Child[] 
   for (const child of children) {
     if (child !== null && child !== undefined && child !== false) insert(node, child);
   }
-  return node as JSX.Element;
+  return node as unknown as JSX.Element;
 }
 
 function text(props: Record<string, unknown>, children: Child[]): JSX.Element {
@@ -35,12 +27,6 @@ function box(props: Record<string, unknown>, children: Child[] = []): JSX.Elemen
   return element("box", props, children);
 }
 
-interface PluginApiLike {
-  renderer: { requestRender: () => void };
-  lifecycle: { onDispose: (callback: () => void) => void };
-  slots: { register: (options: { order: number; slots: { sidebar_content: () => JSX.Element } }) => void };
-  theme: { current: TextTheme };
-}
 
 export function renderText(value: string, color: unknown): JSX.Element {
   return text({ fg: color }, [value]);
@@ -158,6 +144,105 @@ export function renderPanel(children: Child[], _theme: TextTheme): JSX.Element {
   return box({ width: "100%", flexDirection: "column", paddingTop: 0, paddingBottom: 0, paddingLeft: 0, paddingRight: 0 }, children);
 }
 
+export type ResolvedThemeLike = Readonly<{
+  text: Readonly<{
+    base: unknown;
+    muted: unknown;
+    feedback: Readonly<{
+      warning: Readonly<{ base: unknown }>;
+      error: Readonly<{ base: unknown }>;
+    }>;
+  }>;
+  background: Readonly<{ base: unknown }>;
+  border: Readonly<{ base: unknown }>;
+}>;
+
+export type SidebarAccessors = Readonly<{
+  getState: () => SidebarRuntimeState;
+  getCollapsedState: () => Record<string, boolean>;
+  getSelectedAgent: () => string | null;
+  getSectionCollapsed: () => boolean;
+  onToggleCategory: (category: string) => void;
+  onToggleAgent: (name: string) => void;
+  onToggleSection: () => void;
+  getTheme: () => ResolvedThemeLike;
+}>;
+
+export type SidebarRenderInput = Readonly<{
+  state: SidebarRuntimeState;
+  collapsedState: Record<string, boolean>;
+  selectedAgent: string | null;
+  isSectionCollapsed: boolean;
+  toggleCategory: (category: string) => void;
+  toggleAgent: (name: string) => void;
+  toggleSection: () => void;
+  theme: TextTheme;
+}>;
+
+export type SidebarMountNode = JSX.Element;
+
+export interface SidebarMountAdapter<Node> {
+  createContainer(): Node;
+  insert(container: Node, accessor: () => unknown): void;
+  render(input: SidebarRenderInput): unknown;
+  renderError(message: string, theme: TextTheme): unknown;
+}
+
+const FALLBACK_THEME: TextTheme = {
+  accent: undefined,
+  background: undefined,
+  borderActive: undefined,
+  text: undefined,
+  textMuted: undefined,
+  error: undefined,
+};
+
+const DEFAULT_MOUNT_ADAPTER: SidebarMountAdapter<JSX.Element> = {
+  createContainer: () => box({ width: "100%" }),
+  insert: (container, accessor) => { insert(container, accessor); },
+  render: (input) => renderSidebar(input),
+  renderError: (message, theme) => box({ width: "100%" }, [
+    text({ fg: theme.error ?? theme.textMuted }, [`agents-sidebar render error: ${message}`]),
+  ]),
+};
+
+export function mountSidebar<Node = JSX.Element>(
+  accessors: SidebarAccessors,
+  adapter: SidebarMountAdapter<Node> = DEFAULT_MOUNT_ADAPTER as unknown as SidebarMountAdapter<Node>,
+): Node {
+  const container = adapter.createContainer();
+  adapter.insert(container, () => {
+    let theme = FALLBACK_THEME;
+    try {
+      theme = textThemeFrom(accessors.getTheme());
+      return adapter.render({
+        state: accessors.getState(),
+        collapsedState: accessors.getCollapsedState(),
+        selectedAgent: accessors.getSelectedAgent(),
+        isSectionCollapsed: accessors.getSectionCollapsed(),
+        toggleCategory: accessors.onToggleCategory,
+        toggleAgent: accessors.onToggleAgent,
+        toggleSection: accessors.onToggleSection,
+        theme,
+      });
+    } catch (error: unknown) {
+      return adapter.renderError(sanitizeLine(shortError(error)).slice(0, 80), theme);
+    }
+  });
+  return container;
+}
+
+function textThemeFrom(theme: ResolvedThemeLike): TextTheme {
+  return {
+    accent: theme.text.feedback.warning.base,
+    background: theme.background.base,
+    borderActive: theme.border.base,
+    error: theme.text.feedback.error.base,
+    text: theme.text.base,
+    textMuted: theme.text.muted,
+  };
+}
+
 export function renderSidebar(props: RenderSidebarProps): JSX.Element {
   return renderSidebarView({ ...props, state: props.state });
 }
@@ -172,11 +257,8 @@ export function renderSidebarView(props: RenderSidebarViewProps): JSX.Element {
   return renderLoadedSidebar(props, agents);
 }
 
-type SidebarRuntimeState =
-  | (Extract<SidebarViewState, { kind: "loaded" }> & { watchedPaths: string[]; defaultCollapsed: string[]; sectionCollapsed: boolean })
-  | { kind: "error"; error: string; config: SidebarConfig };
 
-interface RenderSidebarProps {
+export interface RenderSidebarProps {
   state: SidebarRuntimeState;
   collapsedState: Record<string, boolean>;
   selectedAgent: string | null;
@@ -188,7 +270,7 @@ interface RenderSidebarProps {
 }
 
 interface RenderSidebarViewProps extends Omit<RenderSidebarProps, "state"> {
-  state: SidebarViewState | { kind: "error"; error: string; config: SidebarConfig };
+  state: SidebarRuntimeState | SidebarViewState;
 }
 
 function renderLoadedSidebar(props: RenderSidebarViewProps, agents: AgentEntry[]): JSX.Element {
@@ -244,151 +326,3 @@ function errorStateMessage(state: Exclude<RenderSidebarViewProps["state"], { kin
   return state.error;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function debounce(callback: () => void, delayMs: number): () => void {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  return () => {
-    if (timer !== undefined) clearTimeout(timer);
-    timer = setTimeout(callback, delayMs);
-  };
-}
-
-function createReload(api: PluginApiLike, _state: () => SidebarRuntimeState, setState: (next: SidebarRuntimeState) => void, fingerprint: () => string, setFingerprint: (next: string) => void): () => void {
-  return () => void (async () => {
-    try {
-      const nextState = await loadSidebarRuntimeState();
-      const nextFingerprint = sidebarFingerprint(nextState);
-      if (nextFingerprint === fingerprint()) return;
-      setState(nextState);
-      setFingerprint(nextFingerprint);
-      api.renderer.requestRender();
-    } catch (_err: unknown) {
-      return;
-    }
-  })();
-}
-
-function registerConfigWatcher(paths: string[], reload: () => void, fallbackMs: number): { watchers: Watcher[]; fallbackTimer?: Timer } {
-  const debouncedReload = debounce(reload, WATCH_DEBOUNCE_MS);
-  const watchers: Watcher[] = [];
-  try {
-    for (const path of paths) {
-      watchers.push(watch(path, { persistent: false }, (event: string) => {
-        if (event === "change" || event === "rename") debouncedReload();
-      }));
-    }
-    return { watchers };
-  } catch (_err: unknown) {
-    for (const watcher of watchers) watcher.close();
-    return { watchers: [], fallbackTimer: setInterval(reload, fallbackMs) };
-  }
-}
-
-async function loadSidebarRuntimeState(): Promise<SidebarRuntimeState> {
-  try {
-    const loaded = await loadAgentSources();
-    const sidebarConfig = configFromSources(loaded.sources);
-    const viewState = buildSidebarViewState(loaded.sources, sidebarConfig);
-    if (viewState.kind !== "loaded") return { kind: "error", error: "Agent providers did not load", config: sidebarConfig };
-    return {
-      ...viewState,
-      watchedPaths: loaded.sources.flatMap((source) => source.watchedPaths),
-      defaultCollapsed: defaultCollapsedFromSources(loaded.sources),
-      sectionCollapsed: sectionCollapsedFromSources(loaded.sources),
-    };
-  } catch (error: unknown) {
-    return { kind: "error", error: error instanceof Error ? error.message : String(error), config: DEFAULTS };
-  }
-}
-
-function configFromSources(sources: AgentSourceState[]): SidebarConfig {
-  const tui = sources.find((source) => isRecord(source.metadata.tui))?.metadata.tui;
-  return mergeConfig(tui);
-}
-
-function defaultCollapsedFromSources(sources: AgentSourceState[]): string[] {
-  const tui = sources.find((source) => isRecord(source.metadata.tui))?.metadata.tui;
-  if (!isRecord(tui) || !Array.isArray(tui.default_collapsed)) return DEFAULTS.default_collapsed;
-  return tui.default_collapsed.every((item) => typeof item === "string") ? [...tui.default_collapsed] : DEFAULTS.default_collapsed;
-}
-
-function sectionCollapsedFromSources(sources: AgentSourceState[]): boolean {
-  const tui = sources.find((source) => isRecord(source.metadata.tui))?.metadata.tui;
-  return isRecord(tui) && typeof tui.default_agents_collapsed === "boolean" ? tui.default_agents_collapsed : false;
-}
-
-function sidebarFingerprint(state: SidebarRuntimeState): string {
-  if (state.kind !== "loaded") return `error:${state.error}`;
-  return JSON.stringify({ agents: state.agents, providerStatus: state.providerStatus, watchedPaths: state.watchedPaths });
-}
-
-const plugin: TuiPluginModule & { id: string } = {
-  id: "agents-sidebar:tui",
-  tui: async (api, _options, _meta) => {
-    let currentState = await loadSidebarRuntimeState();
-    let lastFingerprint = sidebarFingerprint(currentState);
-    let collapsedInitialized = false;
-    const initialConfig = currentState.kind === "loaded" ? currentState.sidebarConfig : currentState.config;
-    const [getCollapsedMap, setCollapsedMap] = createSignal<Record<string, boolean>>({});
-    const [getSelectedAgent, setSelectedAgent] = createSignal<string | null>(null);
-    const [isSectionCollapsed, setSectionCollapsed] = createSignal(false);
-
-    const initializeCollapsed = (state: SidebarRuntimeState): void => {
-      if (collapsedInitialized || state.kind !== "loaded") return;
-      collapsedInitialized = true;
-      setCollapsedMap(Object.fromEntries(state.defaultCollapsed.map((name) => [name, true])));
-      setSectionCollapsed(state.sectionCollapsed);
-    };
-    initializeCollapsed(currentState);
-  const setState = (next: SidebarRuntimeState): void => { currentState = next; initializeCollapsed(next); };
-    const setFingerprint = (next: string): void => { lastFingerprint = next; };
-    const requestRender = (): void => api.renderer.requestRender();
-    const watchedPaths = currentState.kind === "loaded" ? currentState.watchedPaths : [];
-    const watcherState = registerConfigWatcher(watchedPaths, createReload(api, () => currentState, setState, () => lastFingerprint, setFingerprint), initialConfig.poll_interval_ms);
-    const toggleCategory = (category: string): void => {
-      setCollapsedMap({ ...getCollapsedMap(), [category]: !(getCollapsedMap()[category] ?? false) });
-      requestRender();
-    };
-    const toggleAgent = (name: string): void => {
-      setSelectedAgent(getSelectedAgent() === name ? null : name);
-      requestRender();
-    };
-    const toggleSectionCollapsed = (): void => {
-      setSectionCollapsed(!isSectionCollapsed());
-      requestRender();
-    };
-    api.lifecycle.onDispose(() => {
-      for (const watcher of watcherState.watchers) watcher.close();
-      if (watcherState.fallbackTimer !== undefined) clearInterval(watcherState.fallbackTimer);
-    });
-    api.slots.register({
-      order: initialConfig.slot_order,
-      slots: {
-        sidebar_content: () => {
-          try {
-            const theme = api.theme.current as TextTheme & { error: unknown };
-            const result = renderSidebar({
-              state: currentState,
-              collapsedState: getCollapsedMap(),
-              selectedAgent: getSelectedAgent(),
-              isSectionCollapsed: isSectionCollapsed(),
-              toggleCategory,
-              toggleAgent,
-              toggleSection: toggleSectionCollapsed,
-              theme,
-            });
-            return result;
-          } catch (renderErr: unknown) {
-            const theme = api.theme.current as TextTheme & { error: unknown };
-            return box({ width: "100%" }, [text({ fg: theme.error }, [`agents-sidebar render error: ${String(renderErr).slice(0, 60)}`])]);
-          }
-        },
-      },
-    });
-  },
-};
-
-export default plugin;
